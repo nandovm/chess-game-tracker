@@ -15,17 +15,25 @@ rng.seed(12345)
 
 def thresh_callback_rec(val):
     threshold = val
-    edged= cv2.Canny(pedge, threshold, threshold*2, apertureSize = 3, L2gradient = True)
-    minLineLength = 200
-    maxLineGap = 2
-    lines = cv2.HoughLinesP(edged,1.5,np.pi/180,100,minLineLength,maxLineGap)
+    edged= cv2.Canny(pedge, threshold, threshold*3, apertureSize = 3, L2gradient = False)
+    cv2.imshow("Canny",edged)
+    minLineLength = 35
+    maxLineGap = 8
+    lines = cv2.HoughLinesP(image=edged,rho=0.5,theta = np.pi/180, threshold = 10,minLineLength=minLineLength,maxLineGap=maxLineGap)
+    copy = np.zeros((edged.shape[0], edged.shape[1], 3), dtype=np.uint8);
     for line in lines:
     	for x1,y1,x2,y2 in line:
-    		cv2.line(resized,(x1,y1),(x2,y2),(0,255,0),1)
 
+    		#TODO FILTRAR POR ANGULO
+    		if(np.arctan( (y2-y1)/(x2-x1) )/np.pi)
+    		cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
+    		"""
+    		if abs(y2-y1) < 50: 
+    			cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
+    		
+    		else :
+    			cv2.line(resized,(x1,y1),(x2,y2),(0,255,0),1)
 
-	
-	"""
     # This returns an array of r and theta values
     lines = cv2.HoughLines(edged,1,np.pi/180, 1)
     print(lines)
@@ -46,7 +54,7 @@ def thresh_callback_rec(val):
 		x1 = int(x0 + 1000*(-b)) 
 
 		# y1 stores the rounded off value of (rsin(theta)+1000cos(theta)) 
-		y1 = int(y0 + 1000*(a)) 
+		y1 = int(y0 + 1000*(a))  	
 
 		# x2 stores the rounded off value of (rcos(theta)+1000sin(theta)) 
 		x2 = int(x0 - 1000*(-b)) 
@@ -67,7 +75,7 @@ def thresh_callback_rec(val):
     im, cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     #cnts = imutils.grab_contours([cnts)
     cnts = sorted(cnts, key = cv2.contourArea, reverse = True)
-    print(cnts)
+    print(lines)
     output = resized.copy();
     #cv2.drawContours(output, cnts, -1, (0,255,0), 1)
 
@@ -104,11 +112,11 @@ def thresh_callback_rec(val):
     # Draw polygonal contour + bonding rects + circles    
 	#cv2.circle(drawing, (int(centers[i][0]), int(centers[i][1])), int(radius[i]), color, 2)
 
-	cv2.imshow("EDGE", resized)
+	cv2.imshow("EDGE", copy)
     
     cv2.imshow('Contours', drawing)
     cv2.waitKey(0)
-
+"""
 def thresh_callback_ell(val):
     threshold = val
     edged = cv2.Canny(pedge, threshold, threshold*2)
@@ -118,10 +126,10 @@ def thresh_callback_ell(val):
     cnts = cnts[:20]
 
     print(cnts)
-    """
-    cnts = imutils.grab_contours([cnts])
-    cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
-    """
+    
+    #cnts = imutils.grab_contours([cnts])
+    #cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
+    
     minRect = [None]*len(cnts)
     minEllipse = [None]*len(cnts)
     for i, c in enumerate(cnts):
@@ -143,7 +151,7 @@ def thresh_callback_ell(val):
         cv2.drawContours(drawing, [box], 0, color)
         cv2.imshow('Contours', drawing)
     	cv2.waitKey(0)
-
+"""
 
 
 # construct the argument parse and parse the arguments
