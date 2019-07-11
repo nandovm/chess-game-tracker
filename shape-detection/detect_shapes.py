@@ -3,6 +3,7 @@
 
 # import the necessary packages
 from pyimagesearch.shapedetector import ShapeDetector
+from pylsd import lsd
 import argparse
 import imutils
 import cv2
@@ -15,68 +16,69 @@ rng.seed(12345)
 
 def thresh_callback_rec(val):
     threshold = val
-    edged= cv2.Canny(pedge, threshold, threshold*3, apertureSize = 3, L2gradient = False)
+    edged = cv2.Canny(blurred, threshold*0.5, threshold, apertureSize = 3, L2gradient = False)
+    
     cv2.imshow("Canny",edged)
+    cv2.waitKey(0);
+
+
     minLineLength = 35
     maxLineGap = 8
-    lines = cv2.HoughLinesP(image=edged,rho=0.5,theta = np.pi/180, threshold = 10,minLineLength=minLineLength,maxLineGap=maxLineGap)
-    copy = np.zeros((edged.shape[0], edged.shape[1], 3), dtype=np.uint8);
+
+    #Detect lines in the image
+    seglines = lsd(edged)
+    print(seglines.shape[0])
+    copy = np.zeros((edged.shape[0], edged.shape[1], 3), dtype=np.uint8)
+
+    for i in xrange(seglines.shape[0]):
+		pt1 = (int(seglines[i, 0]), int(seglines[i, 1]))
+		pt2 = (int(seglines[i, 2]), int(seglines[i, 3]))
+		width = seglines[i, 4]
+		if (abs(pt2[0] - pt1[0])) > 50: #filter the largest lines
+			cv2.line(copy, pt1, pt2, (0, 255, 0), int(np.ceil(width / 2)))
+
+    #lines = cv2.HoughLinesP(image=edged,rho=0.5,theta = np.pi/180, threshold = 10,minLineLength=minLineLength,maxLineGap=maxLineGap)
+    cv2.imshow("LSD",copy)
+    cv2.waitKey(0);
+
     for line in lines:
     	for x1,y1,x2,y2 in line:
 
     		#TODO FILTRAR POR ANGULO
-    		if(np.arctan( (y2-y1)/(x2-x1) )/np.pi)
+    		#if(np.arctan( (y2-y1)/(x2-x1) )/np.pi)
     		cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
-    		"""
-    		if abs(y2-y1) < 50: 
-    			cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
-    		
-    		else :
-    			cv2.line(resized,(x1,y1),(x2,y2),(0,255,0),1)
-
-    # This returns an array of r and theta values
-    lines = cv2.HoughLines(edged,1,np.pi/180, 1)
-    print(lines)
-    for r,theta in lines[0]:		      
-		# Stores the value of cos(theta) in a 
-		a = np.cos(theta) 
-
-		# Stores the value of sin(theta) in b 
-		b = np.sin(theta) 
-
-		# x0 stores the value rcos(theta) 
-		x0 = a*r 
-
-		# y0 stores the value rsin(theta) 
-		y0 = b*r 
-
-		# x1 stores the rounded off value of (rcos(theta)-1000sin(theta)) 
-		x1 = int(x0 + 1000*(-b)) 
-
-		# y1 stores the rounded off value of (rsin(theta)+1000cos(theta)) 
-		y1 = int(y0 + 1000*(a))  	
-
-		# x2 stores the rounded off value of (rcos(theta)+1000sin(theta)) 
-		x2 = int(x0 - 1000*(-b)) 
-
-		# y2 stores the rounded off value of (rsin(theta)-1000cos(theta)) 
-		y2 = int(y0 - 1000*(a)) 
-
-		# cv2.line draws a line in img from the point(x1,y1) to (x2,y2). 
-		# (0,0,255) denotes the colour of the line to be  
-		#drawn. In this case, it is red.  
-		cv2.line(resized,(x1,y1), (x2,y2), (0,0,255),2)
-		cv2.imshow("LINES", resized)
-		cv2.waitKey(0)
-	"""
- 	print("HOLAAAAA")
 
 
     im, cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     #cnts = imutils.grab_contours([cnts)
     cnts = sorted(cnts, key = cv2.contourArea, reverse = True)
-    print(lines)
+    #print(lines)
     output = resized.copy();
+    contours_poly = [None]*len(cnts)
+    boundRect = [None]*len(cnts)
+    centers = [None]*len(cnts)
+    radius = [None]*len(cnts)
+    drawing = resized.copy();
+    for i, c in enumerate(cnts):
+    	peri = cv2.arcLength(c, True)
+        contours_poly[i] = cv2.approxPolyDP(c, 0.015 * peri, True)
+        boundRect[i] = cv2.boundingRect(contours_poly[i])
+        color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
+        cv2.drawContours(drawing, contours_poly, i, color)
+        cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
+          (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
+
+
+
+	cv2.imshow("Hough", copy)
+    
+    cv2.imshow('Bounding', drawing)
+
+
+    cv2.waitKey(0)
+
+
+
     #cv2.drawContours(output, cnts, -1, (0,255,0), 1)
 
     #for c in cnts:
@@ -93,65 +95,13 @@ def thresh_callback_rec(val):
     cnts = imutils.grab_contours([cnts])
     cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
     """
-    contours_poly = [None]*len(cnts)
-    boundRect = [None]*len(cnts)
-    centers = [None]*len(cnts)
-    radius = [None]*len(cnts)
-    drawing = resized.copy();
-    for i, c in enumerate(cnts):
-    	peri = cv2.arcLength(c, True)
-        contours_poly[i] = cv2.approxPolyDP(c, 0.015 * peri, True)
-        boundRect[i] = cv2.boundingRect(contours_poly[i])
-        color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
-        cv2.drawContours(drawing, contours_poly, i, color)
-        cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
-          (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
+
         #centers[i], radius[i] = cv2.minEnclosingCircle(contours_poly[i])
     # Draw contours + rotated rects + ellipses
     
     # Draw polygonal contour + bonding rects + circles    
 	#cv2.circle(drawing, (int(centers[i][0]), int(centers[i][1])), int(radius[i]), color, 2)
 
-	cv2.imshow("EDGE", copy)
-    
-    cv2.imshow('Contours', drawing)
-    cv2.waitKey(0)
-"""
-def thresh_callback_ell(val):
-    threshold = val
-    edged = cv2.Canny(pedge, threshold, threshold*2)
-    cv2.imshow("EDGE", edged)
-    cv2.waitKey(0)
-    im, cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = cnts[:20]
-
-    print(cnts)
-    
-    #cnts = imutils.grab_contours([cnts])
-    #cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
-    
-    minRect = [None]*len(cnts)
-    minEllipse = [None]*len(cnts)
-    for i, c in enumerate(cnts):
-        minRect[i] = cv2.minAreaRect(c)
-        if c.shape[0] > 5:
-            minEllipse[i] = cv2.fitEllipse(c)
-    # Draw contours + rotated rects + ellipses
-    drawing = np.zeros((edged.shape[0], edged.shape[1], 3), dtype=np.uint8)
-    for i, c in enumerate(cnts):
-        color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
-        # contour
-        cv2.drawContours(drawing, cnts, i, color)
-        # ellipse
-        if c.shape[0] > 5:
-            cv2.ellipse(drawing, minEllipse[i], color, 2)
-        # rotated rectangle
-        box = cv2.boxPoints(minRect[i])
-        box = np.intp(box) #np.intp: Integer used for indexing (same as C ssize_t; normally either int32 or int64)
-        cv2.drawContours(drawing, [box], 0, color)
-        cv2.imshow('Contours', drawing)
-    	cv2.waitKey(0)
-"""
 
 
 # construct the argument parse and parse the arguments
@@ -175,14 +125,14 @@ ratio = image.shape[0] / float(resized.shape[0])
 gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 #blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
-pedge = cv2.bilateralFilter(gray, 7, 50, 50)
-cv2.imshow('gray', pedge)
-cv2.waitKey(0)
+blurred = cv2.bilateralFilter(gray, 7, 50, 50)
 
-npedge = np.float32(pedge)
-dst = cv2.cornerHarris(npedge,2,3,0.04)
+
+##CORNER HARRIS MUESTRA MASCARA BLUE AND RED
+#npedge = np.float32(pedge)
+#dst = cv2.cornerHarris(npedge,2,3,0.04)
 #result is dilated for marking the corners, not important
-dst = cv2.dilate(npedge,None)
+#dst = cv2.dilate(npedge,None)
 
 # Threshold for an optimal value, it may vary depending on the image.
 #resized[dst>0.90*dst.max()]=[0,0,255]
@@ -194,12 +144,80 @@ source_window = 'Source'
 cv2.namedWindow(source_window)
 cv2.imshow(source_window, resized)
 
+
+#Create default parametrization LSD
+#lsd = cv2.createLineSegmentDetector(0)
+
+
+
 max_thresh = 255
-thresh = 50 # initial threshold
-cv2.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback_rec)
 
-thresh_callback_rec(thresh)
+threshold = cv2.threshold(gray, 0, 255,  cv2.THRESH_BINARY + cv2.THRESH_OTSU)[0]
+#thresh = 50 # initial threshold
+#cv2.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback_rec)
+edged = cv2.Canny(blurred, threshold*0.5, threshold, apertureSize = 3, L2gradient = False)   
+   
+cv2.imshow("Canny",edged)
+   
+cv2.waitKey(0);
 
+minLineLength = 35
+
+maxLineGap = 8
+
+#Detect lines in the image
+
+seglines = lsd(edged)
+
+print(seglines.shape[0])
+
+copy = np.zeros((edged.shape[0], edged.shape[1], 3), dtype=np.uint8)
+
+for i in xrange(seglines.shape[0]):
+	pt1 = (int(seglines[i, 0]), int(seglines[i, 1]))
+	pt2 = (int(seglines[i, 2]), int(seglines[i, 3]))
+	width = seglines[i, 4]
+	if (abs(pt2[0] - pt1[0])) > 50: #filter the largest lines
+		cv2.line(copy, pt1, pt2, (0, 255, 0), int(np.ceil(width / 2)))
+
+
+cv2.imshow("LSD",copy)
+
+cv2.waitKey(0);
+
+#lines = cv2.HoughLinesP(image=edged,rho=0.5,theta = np.pi/180, threshold = 10,minLineLength=minLineLength,maxLineGap=maxLineGap)
+#
+#for line in lines:
+#
+#	for x1,y1,x2,y2 in line:
+#
+#		#TODO FILTRAR POR ANGULO
+#
+#		#if(np.arctan( (y2-y1)/(x2-x1) )/np.pi)
+#
+#		cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
+
+im, cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#cnts = imutils.grab_contours([cnts)
+cnts = sorted(cnts, key = cv2.contourArea, reverse = True)
+#print(lines)
+output = resized.copy();
+contours_poly = [None]*len(cnts)
+boundRect = [None]*len(cnts)
+centers = [None]*len(cnts)
+radius = [None]*len(cnts)
+drawing = resized.copy();
+for i, c in enumerate(cnts):
+	peri = cv2.arcLength(c, True)
+	contours_poly[i] = cv2.approxPolyDP(c, 0.015 * peri, True)
+	boundRect[i] = cv2.boundingRect(contours_poly[i])
+	color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
+	cv2.drawContours(drawing, contours_poly, i, color)
+	cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
+     (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
+#cv2.imshow("Hough", copy)
+cv2.imshow('Bounding', drawing)
+cv2.waitKey(0)
 
 
 """
@@ -321,4 +339,88 @@ for c in cnts:
 	# show the output image
 	cv2.imshow("Image", image)
 	cv2.waitKey(0)
+"""
+
+
+
+"""
+def thresh_callback_ell(val):
+    threshold = val
+    edged = cv2.Canny(pedge, threshold, threshold*2)
+    cv2.imshow("EDGE", edged)
+    cv2.waitKey(0)
+    im, cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[:20]
+
+    print(cnts)
+    
+    #cnts = imutils.grab_contours([cnts])
+    #cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
+    
+    minRect = [None]*len(cnts)
+    minEllipse = [None]*len(cnts)
+    for i, c in enumerate(cnts):
+        minRect[i] = cv2.minAreaRect(c)
+        if c.shape[0] > 5:
+            minEllipse[i] = cv2.fitEllipse(c)
+    # Draw contours + rotated rects + ellipses
+    drawing = np.zeros((edged.shape[0], edged.shape[1], 3), dtype=np.uint8)
+    for i, c in enumerate(cnts):
+        color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
+        # contour
+        cv2.drawContours(drawing, cnts, i, color)
+        # ellipse
+        if c.shape[0] > 5:
+            cv2.ellipse(drawing, minEllipse[i], color, 2)
+        # rotated rectangle
+        box = cv2.boxPoints(minRect[i])
+        box = np.intp(box) #np.intp: Integer used for indexing (same as C ssize_t; normally either int32 or int64)
+        cv2.drawContours(drawing, [box], 0, color)
+        cv2.imshow('Contours', drawing)
+    	cv2.waitKey(0)
+
+
+    		if abs(y2-y1) < 50: 
+    			cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
+    		
+    		else :
+    			cv2.line(resized,(x1,y1),(x2,y2),(0,255,0),1)
+
+
+
+
+    # This returns an array of r and theta values
+    lines = cv2.HoughLines(edged,1,np.pi/180, 1)
+    print(lines)
+    for r,theta in lines[0]:		      
+		# Stores the value of cos(theta) in a 
+		a = np.cos(theta) 
+
+		# Stores the value of sin(theta) in b 
+		b = np.sin(theta) 
+
+		# x0 stores the value rcos(theta) 
+		x0 = a*r 
+
+		# y0 stores the value rsin(theta) 
+		y0 = b*r 
+
+		# x1 stores the rounded off value of (rcos(theta)-1000sin(theta)) 
+		x1 = int(x0 + 1000*(-b)) 
+
+		# y1 stores the rounded off value of (rsin(theta)+1000cos(theta)) 
+		y1 = int(y0 + 1000*(a))  	
+
+		# x2 stores the rounded off value of (rcos(theta)+1000sin(theta)) 
+		x2 = int(x0 - 1000*(-b)) 
+
+		# y2 stores the rounded off value of (rsin(theta)-1000cos(theta)) 
+		y2 = int(y0 - 1000*(a)) 
+
+		# cv2.line draws a line in img from the point(x1,y1) to (x2,y2). 
+		# (0,0,255) denotes the colour of the line to be  
+		#drawn. In this case, it is red.  
+		cv2.line(resized,(x1,y1), (x2,y2), (0,0,255),2)
+		cv2.imshow("LINES", resized)
+		cv2.waitKey(0)
 """
