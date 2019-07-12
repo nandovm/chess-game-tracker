@@ -144,10 +144,18 @@ ap.add_argument("-i", "--image", required=True,
 	help="path to the input image")
 args = vars(ap.parse_args())
 
+img_width = 600
+
 # load the image and resize it to a smaller factor so that
 # the shapes can be approximated better
 image = cv2.imread(args["image"])
-resized = image.copy() #imutils.resize(image, width=600)
+resized = imutils.resize(image, width=img_width)
+
+resized = resized[img_width/2:img_width, 0:];
+
+#cv2.imshow("cropped", cropped)
+#cv2.waitKey(0);
+
 ratio = image.shape[0] / float(resized.shape[0])
 
 # convert the resized image to grayscale, blur it slightly,
@@ -186,7 +194,7 @@ cv2.imshow(source_window, resized)
 
 max_thresh = 255
 
-threshold, res = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)
+threshold, res = cv2.threshold(gray, 0, max_thresh, cv2.THRESH_OTSU)
 
 cv2.imshow("thres", res)
 
@@ -194,13 +202,13 @@ w, h = res.shape[:2]
 
 mask = select_largest_obj(res, 255, True, False)
 
-#mask = select_largest_obj(mask, 255, True, True)
+#mask = select_largest_obj(mask, 255, True, False)
 cv2.imshow("MASK", mask)
 
 
 #thresh = 50 # initial threshold
 #cv2.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback_rec)
-edged = cv2.Canny(blurred, threshold*0.33, threshold, apertureSize = 3, L2gradient = False)   
+edged = cv2.Canny(mask, threshold*0.33, threshold, apertureSize = 3, L2gradient = False)   
    
 cv2.imshow("Canny",edged)
    
@@ -242,7 +250,7 @@ cv2.waitKey(0);
 #
 #		cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
 
-cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+im, cnts, hier = cv2.findContours(mask.copy(), mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_L1)
 #cnts = imutils.grab_contours([cnts)
 cnts = sorted(cnts, key = cv2.contourArea, reverse = True)
 #print(lines)
@@ -257,12 +265,12 @@ for i, c in enumerate(cnts):
 	contours_poly[i] = cv2.approxPolyDP(c, 0.015 * peri, True)
 	boundRect[i] = cv2.boundingRect(contours_poly[i])
 	color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
-	cv2.drawContours(drawing, contours_poly, i, color)
-	cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
-     (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
-#cv2.imshow("Hough", copy)
-#cv2.imshow('Bounding', drawing)
-#cv2.waitKey(0)
+	cv2.drawContours(drawing, contours_poly, i, color, 3)
+	#cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
+     #(int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
+cv2.imshow("Hough", copy)
+cv2.imshow('Bounding', drawing)
+cv2.waitKey(0)
 
 
 """
