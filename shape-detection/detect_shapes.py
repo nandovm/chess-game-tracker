@@ -3,13 +3,12 @@
 
 # import the necessary packages
 from pyimagesearch.shapedetector import ShapeDetector
-from pylsd import lsd
 import argparse
 import imutils
 import cv2
 import numpy as np
 import random as rng
-
+from pylsd.lsd import lsd
 
 rng.seed(12345)
 
@@ -27,15 +26,16 @@ def thresh_callback_rec(val):
 
     #Detect lines in the image
     seglines = lsd(edged)
+    print("vaya mierdaaa")
     print(seglines.shape[0])
     copy = np.zeros((edged.shape[0], edged.shape[1], 3), dtype=np.uint8)
 
     for i in xrange(seglines.shape[0]):
-		pt1 = (int(seglines[i, 0]), int(seglines[i, 1]))
-		pt2 = (int(seglines[i, 2]), int(seglines[i, 3]))
-		width = seglines[i, 4]
-		if (abs(pt2[0] - pt1[0])) > 50: #filter the largest lines
-			cv2.line(copy, pt1, pt2, (0, 255, 0), int(np.ceil(width / 2)))
+    	pt1 = (int(seglines[i, 0]), int(seglines[i, 1]))
+    	pt2 = (int(seglines[i, 2]), int(seglines[i, 3]))
+    	width = seglines[i, 4]
+    	#if (abs(pt2[0] - pt1[0])) > 10: #filter the largest lines
+    	cv2.line(copy, pt1, pt2, (0, 255, 0), int(np.ceil(width / 2)))
 
     #lines = cv2.HoughLinesP(image=edged,rho=0.5,theta = np.pi/180, threshold = 10,minLineLength=minLineLength,maxLineGap=maxLineGap)
     cv2.imshow("LSD",copy)
@@ -61,23 +61,16 @@ def thresh_callback_rec(val):
     drawing = resized.copy();
     for i, c in enumerate(cnts):
     	peri = cv2.arcLength(c, True)
-        contours_poly[i] = cv2.approxPolyDP(c, 0.015 * peri, True)
-        boundRect[i] = cv2.boundingRect(contours_poly[i])
-        color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
-        cv2.drawContours(drawing, contours_poly, i, color)
-        cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
-          (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
+    	contours_poly[i] = cv2.approxPolyDP(c, 0.015 * peri, True)
+    	boundRect[i] = cv2.boundingRect(contours_poly[i])
+    	color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
+    	cv2.drawContours(drawing, contours_poly, i, color)
+    	cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
+    		(int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
 
-
-
-	cv2.imshow("Hough", copy)
-    
+    cv2.imshow("Hough", copy)
     cv2.imshow('Bounding', drawing)
-
-
     cv2.waitKey(0)
-
-
 
     #cv2.drawContours(output, cnts, -1, (0,255,0), 1)
 
@@ -102,6 +95,47 @@ def thresh_callback_rec(val):
     # Draw polygonal contour + bonding rects + circles    
 	#cv2.circle(drawing, (int(centers[i][0]), int(centers[i][1])), int(radius[i]), color, 2)
 
+def select_largest_obj(img_bin, lab_val=255, fill_holes=False, 
+                           smooth_boundary=False, kernel_size=15):
+        '''Select the largest object from a binary image and optionally
+        fill holes inside it and smooth its boundary.
+        Args:
+            img_bin (2D array): 2D numpy array of binary image.
+            lab_val ([int]): integer value used for the label of the largest 
+                    object. Default is 255.
+            fill_holes ([boolean]): whether fill the holes inside the largest 
+                    object or not. Default is false.
+            smooth_boundary ([boolean]): whether smooth the boundary of the 
+                    largest object using morphological opening or not. Default 
+                    is false.
+            kernel_size ([int]): the size of the kernel used for morphological 
+                    operation. Default is 15.
+        Returns:
+            a binary image as a mask for the largest object.
+        '''
+        n_labels, img_labeled, lab_stats, _ = \
+            cv2.connectedComponentsWithStats(img_bin, connectivity=8, 
+                                             ltype=cv2.CV_32S)
+        largest_obj_lab = np.argmax(lab_stats[1:, 4]) + 1
+        largest_mask = np.zeros(img_bin.shape, dtype=np.uint8)
+        largest_mask[img_labeled == largest_obj_lab] = lab_val
+        # import pdb; pdb.set_trace()
+        if fill_holes:
+            bkg_locs = np.where(img_labeled == 0)
+            bkg_seed = (bkg_locs[0][0], bkg_locs[1][0])
+            img_floodfill = largest_mask.copy()
+            h_, w_ = largest_mask.shape
+            mask_ = np.zeros((h_ + 2, w_ + 2), dtype=np.uint8)
+            cv2.floodFill(img_floodfill, mask_, seedPoint=bkg_seed, 
+                          newVal=lab_val)
+            holes_mask = cv2.bitwise_not(img_floodfill)  # mask of the holes.
+            largest_mask = largest_mask + holes_mask
+        if smooth_boundary:
+            kernel_ = np.ones((kernel_size, kernel_size), dtype=np.uint8)
+            largest_mask = cv2.morphologyEx(largest_mask, cv2.MORPH_OPEN, 
+                                            kernel_)
+            
+        return largest_mask
 
 
 # construct the argument parse and parse the arguments
@@ -113,7 +147,7 @@ args = vars(ap.parse_args())
 # load the image and resize it to a smaller factor so that
 # the shapes can be approximated better
 image = cv2.imread(args["image"])
-resized = imutils.resize(image, width=400)
+resized = image.copy() #imutils.resize(image, width=600)
 ratio = image.shape[0] / float(resized.shape[0])
 
 # convert the resized image to grayscale, blur it slightly,
@@ -152,10 +186,21 @@ cv2.imshow(source_window, resized)
 
 max_thresh = 255
 
-threshold = cv2.threshold(gray, 0, 255,  cv2.THRESH_BINARY + cv2.THRESH_OTSU)[0]
+threshold, res = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)
+
+cv2.imshow("thres", res)
+
+w, h = res.shape[:2]
+
+mask = select_largest_obj(res, 255, True, False)
+
+#mask = select_largest_obj(mask, 255, True, True)
+cv2.imshow("MASK", mask)
+
+
 #thresh = 50 # initial threshold
 #cv2.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback_rec)
-edged = cv2.Canny(blurred, threshold*0.5, threshold, apertureSize = 3, L2gradient = False)   
+edged = cv2.Canny(blurred, threshold*0.33, threshold, apertureSize = 3, L2gradient = False)   
    
 cv2.imshow("Canny",edged)
    
@@ -177,7 +222,7 @@ for i in xrange(seglines.shape[0]):
 	pt1 = (int(seglines[i, 0]), int(seglines[i, 1]))
 	pt2 = (int(seglines[i, 2]), int(seglines[i, 3]))
 	width = seglines[i, 4]
-	if (abs(pt2[0] - pt1[0])) > 50: #filter the largest lines
+	if (abs(pt2[0] - pt1[0])) > 6 : #filter the largest lines CUANTO MAS BAJO MAS LINEAS
 		cv2.line(copy, pt1, pt2, (0, 255, 0), int(np.ceil(width / 2)))
 
 
@@ -197,7 +242,7 @@ cv2.waitKey(0);
 #
 #		cv2.line(copy,(x1,y1),(x2,y2),(0,255,0),1)
 
-im, cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+cnts, hier = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 #cnts = imutils.grab_contours([cnts)
 cnts = sorted(cnts, key = cv2.contourArea, reverse = True)
 #print(lines)
@@ -216,8 +261,8 @@ for i, c in enumerate(cnts):
 	cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), \
      (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 2)
 #cv2.imshow("Hough", copy)
-cv2.imshow('Bounding', drawing)
-cv2.waitKey(0)
+#cv2.imshow('Bounding', drawing)
+#cv2.waitKey(0)
 
 
 """
