@@ -3,6 +3,7 @@ import imutils
 import cv2
 import numpy as np
 import random as rng
+import itertools as itl
 from pylsd.lsd import lsd
 
 rng.seed(12345)
@@ -18,7 +19,7 @@ img_width = 600
 # load the image and resize it to a smaller factor so that
 # the shapes can be approximated better
 image = cv2.imread(args["image"])
-#resized = imutils.resize(image, width=img_width)
+image = imutils.resize(image, width=img_width)
 
 
 
@@ -52,13 +53,43 @@ edged = cv2.Canny(gray, threshold*0.33, threshold, apertureSize = 3, L2gradient 
 cv2.imshow("Canny",edged)
 cv2.waitKey(0);
 
-for x in range(0,9):
-	cv2.line(image, ((gray.shape[1]/8)*x, 0), ((gray.shape[1]/8)*x, gray.shape[0]), (255, 255, 0), 2)
-for y in range(0,9):
-	cv2.line(image, (0, (gray.shape[0]/8)*y), (gray.shape[1], (gray.shape[0]/8)*y), (255, 255, 0), 2)
+x_list = []
+y_list = []
 
-cv2.imshow('LINES',image)
+square_width = gray.shape[1]/8
+square_height = gray.shape[0]/8
+
+for x in range(0,9):
+	new_x = square_width*x
+	cv2.line(image, (new_x, 0), (new_x, gray.shape[0]), (255, 255, 0), 2)
+	if x!=8:
+		x_list.append(new_x)
+for y in range(0,9):
+	new_y = square_height*y
+	cv2.line(image, (0, new_y), (gray.shape[1], new_y), (255, 255, 0), 2)
+	if y != 8:
+		y_list.append(new_y)
+
+pnts_lists = [x_list, y_list]
+square_list = []
+
+for e in itl.product(*pnts_lists):
+	square_list.append(e)
+
+print(len(square_list))
+
+
+
+cv2.imshow("LINES",image)
 cv2.waitKey(0)
+
+crop = gray[square_list[4][1]:square_list[4][1]+square_height, square_list[4][0]:square_list[4][0]+square_width]
+#crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+#crop = cv2.equalizeHist(crop)
+thres, crop = cv2.threshold(crop, 80, 255, cv2.THRESH_BINARY_INV)
+cv2.imshow("First Square", crop)
+cv2.waitKey(0)
+
 
 
 """
