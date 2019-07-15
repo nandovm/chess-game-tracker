@@ -191,18 +191,34 @@ res = np.hstack((centroids,corners))
 res = np.int0(res) 
 print (res)
 
-for x in range(1, len(corners)):
+x_min = min(corners, key = lambda t: t[0])[0]
+x_max = max(corners, key = lambda t: t[0])[0]
+y_min = min(corners, key = lambda t: t[1])[1]
+y_max = max(corners, key = lambda t: t[1])[1]
 
-		x1, y1 = corners[x][0],res[x][1]
-		x2, y2 = corners[x][0],res[x][1]
+
+key_corners = ((x_min, y_min),(x_max, y_min), (x_min, y_max), (x_max, y_max))
+
+print(key_corners)
+
+for x in range(0, len(key_corners)):
+
+		x1, y1 = key_corners[x][0],key_corners[x][1]
+		x2, y2 = key_corners[x][0],key_corners[x][1]
+		print("yeee")
 		print(x1, y1)
 		cv2.line(image, (x1, y1), (x2, y2), (255, 0, 0),4)
 
-image[res[:,1],res[:,0]]=[0,0,255] 
-image[res[:,3],res[:,2]] = [0,255,0]
+
+#image[res[:,1],res[:,0]]=[0,0,255] 
+#image[res[:,3],res[:,2]] = [0,255,0]
 
 # Threshold for an optimal value, it may vary depending on the image.
 #image[dst>0.1*dst.max()]=[0,0,255]
+#corners = sorted(corners, key=lambda x: x[0]*x[1])
+#print(min(corners, key = lambda t: (t[0], t[1]) ))
+
+
 
 cv2.imshow('Harris',image)
 cv2.waitKey(0)
