@@ -10,6 +10,23 @@ from pylsd.lsd import lsd
 
 
 
+
+def closest_node(node, nodes):
+    nodes = np.asarray(nodes)
+    dist_2 = np.sum((nodes - node)**2, axis=1)
+    return np.argmin(dist_2)
+
+
+def crop_border(param):
+	box = cv2.threshold(param, 240, 255, cv2.THRESH_BINARY)[1]
+	box = (255-box)
+
+	im,contours,hierarchy = cv2.findContours(box,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+	cnt = contours[0]
+	x,y,w,h = cv2.boundingRect(cnt)
+	return x,y,w,h
+
+
 def check_occupancy(sq_image):
 	n_pixels = cv2.countNonZero(sq_image)
 
@@ -23,24 +40,22 @@ def corner_matcher(im1, im2):
 	img2 = im2
 
 	# Initiate SIFT detector
-	sift = cv2.xfeatures2d.SIFT_create()
+	orb = cv2.ORB_create()
 	
 	# find the keypoints and descriptors with SIFT
-	kp1, des1 = sift.detectAndCompute(img1,None)
-	kp2, des2 = sift.detectAndCompute(img2,None)
+	kp1, des1 = orb.detectAndCompute(img1,None)
+	kp2, des2 = orb.detectAndCompute(img2,None)
+	# create BFMatcher object
+	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 	
-	# BFMatcher with default params
-	bf = cv2.BFMatcher()
-	matches = bf.knnMatch(des1,des2, k=2)
+	# Match descriptors.
+	matches = bf.match(des1,des2)
 	
-	# Apply ratio test
-	good = []
-	for m,n in matches:
-	    if m.distance < 0.75*n.distance:
-	        good.append([m])
+	# Sort them in the order of their distance.
+	matches = sorted(matches, key = lambda x:x.distance)
 	
-	# cv2.drawMatchesKnn expects list of lists as matches.
-	img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,flags=2)
+	# Draw first 10 matches.
+	img3 = cv2.drawMatches(img1,kp1,img2,kp2,matches, None)
 	
 	plt.imshow(img3),plt.show()
 
@@ -110,14 +125,14 @@ model = cv2.imread('model.jpg',0)
 model = imutils.resize(model, width=img_width)
 
 
-cv2.imshow('MODEL', model)
+found, pnts = cv2.findChessboardCorners(model, (7,7))
+print(found)
+copy = model.copy()
+cv2.drawChessboardCorners(copy, (7,7), pnts , found)
+cv2.imshow('ModelPoints', copy)
 cv2.waitKey(0)
 
 
-
-
-
-#EDGE Detection
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 #blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 blurred = cv2.bilateralFilter(gray, 7, 50, 50)
@@ -127,40 +142,69 @@ max_thresh = 255
 
 threshold, res = cv2.threshold(gray, 0, max_thresh, cv2.THRESH_OTSU)
 
-found, pnts = cv2.findChessboardCorners(model, (7,7))
-print(found)
-copy = model.copy()
-cv2.drawChessboardCorners(copy, (7,7), pnts , found)
-cv2.imshow('ModelPoints', copy)
+x, y, w, h = crop_border(gray)
+
+image = image[y:y+h, x:x+w]
+gray = gray[y:y+h, x:x+w]
+
+cv2.imshow('Normal', gray)
 cv2.waitKey(0)
 
+hist,bins = np.histogram(gray.flatten(),256,[0,256])
+cdf = hist.cumsum()
+cdf_normalized = cdf * hist.max()/ cdf.max()
+cdf_m = np.ma.masked_equal(cdf,0)
+cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
+cdf = np.ma.filled(cdf_m,0).astype('uint8')
+gray = cdf[gray]
 
-box = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY)[1]
-box = (255-box)
-cv2.imshow('BOX', box)
+
+#clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+#gray = clahe.apply(gray)
+
+
+cv2.imshow('CLAHE', gray)
 cv2.waitKey(0)
 
-im,contours,hierarchy = cv2.findContours(box,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-cnt = contours[0]
-x,y,w,h = cv2.boundingRect(cnt)
-image = image[y:y+h,x:x+w]
-gray = gray[y:y+h,x:x+w]
-cv2.imshow('GRAY',gray)
-cv2.waitKey(0)
-
-
-corner_matcher(model, gray)
+#corner_matcher(model, gray)
 
 ngray = np.float32(gray.copy())
 dst = cv2.cornerHarris(ngray,2,3,0.04)
 
+print(dst[0])
+
 #result is dilated for marking the corners, not important
 dst = cv2.dilate(dst,None)
 
-# Threshold for an optimal value, it may vary depending on the image.
-image[dst>0.01*dst.max()]=[0,0,255]
+ret, dst = cv2.threshold(dst,0.1*dst.max(),255,0)
+dst = np.uint8(dst)
 
-cv2.imshow('dst',image)
+ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
+
+#define the criteria to stop and refine the corners
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+corners = cv2.cornerSubPix(gray,np.float32(centroids),(5,5),(-1,-1),criteria)
+#here u can get corners
+
+
+res = np.hstack((centroids,corners)) 
+res = np.int0(res) 
+print (res)
+
+for x in range(1, len(corners)):
+
+		x1, y1 = corners[x][0],res[x][1]
+		x2, y2 = corners[x][0],res[x][1]
+		print(x1, y1)
+		cv2.line(image, (x1, y1), (x2, y2), (255, 0, 0),4)
+
+image[res[:,1],res[:,0]]=[0,0,255] 
+image[res[:,3],res[:,2]] = [0,255,0]
+
+# Threshold for an optimal value, it may vary depending on the image.
+#image[dst>0.1*dst.max()]=[0,0,255]
+
+cv2.imshow('Harris',image)
 cv2.waitKey(0)
 
 #_, gray = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
@@ -217,13 +261,6 @@ for x in range(0, 1):
 		
 		clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
 		crop = clahe.apply(crop)
-		#hist,bins = np.histogram(crop.flatten(),256,[0,256])
-		#cdf = hist.cumsum()
-		#cdf_normalized = cdf * hist.max()/ cdf.max()
-		#cdf_m = np.ma.masked_equal(cdf,0)
-		#cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
-		#cdf = np.ma.filled(cdf_m,0).astype('uint8')
-		#crop = cdf[crop]
 
 
 
