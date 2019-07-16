@@ -17,13 +17,21 @@ def closest_node(node, nodes):
     return np.argmin(dist_2)
 
 
-def crop_border(param):
-	box = cv2.threshold(param, 240, 255, cv2.THRESH_BINARY)[1]
-	box = (255-box)
+def crop_border(param): 
+	box = cv2.threshold(param, 140, 255, cv2.THRESH_BINARY_INV)[1]
 
 	im,contours,hierarchy = cv2.findContours(box,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+
+	contours = sorted(contours, key = cv2.contourArea, reverse = True)[:10]
+	print(contours)
+	cv2.drawContours(image, contours, -1, (0,255,0), 2)
+	cv2.imshow("BOX", image)
+
+	cv2.waitKey(0)
+	
 	cnt = contours[0]
 	x,y,w,h = cv2.boundingRect(cnt)
+	print(x,y,w,h)
 	return x,y,w,h
 
 
@@ -159,12 +167,38 @@ cdf = np.ma.filled(cdf_m,0).astype('uint8')
 gray = cdf[gray]
 
 
-#clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+#clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8)) 
 #gray = clahe.apply(gray)
 
 
-cv2.imshow('CLAHE', gray)
+
+
+val = 0.5
+
+dem = 8+2*val;
+
+img_width = gray.shape[1];
+img_height = gray.shape[0]; 
+
+sq_norm_size = img_width/dem
+
+desp = sq_norm_size * val;
+
+image = image[int(desp):int(img_height-desp), int(desp):int(img_width-desp)]
+gray = gray[int(desp):int(img_height-desp), int(desp):int(img_width-desp)]
+
+cv2.imshow('Histogram', gray)
 cv2.waitKey(0)
+
+
+#NEW CONTOURS ON CROPPED IMAGE
+#new = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)[1]
+#im,contours,hierarchy = cv2.findContours(new,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+#contours = sorted(contours, key = cv2.contourArea, reverse = True)[:10]
+#print(contours)
+#cv2.drawContours(image, contours, 0, (0,255,0), 2)
+#cv2.imshow("DEEs", image)
+#cv2.waitKey(0)
 
 #corner_matcher(model, gray)
 
