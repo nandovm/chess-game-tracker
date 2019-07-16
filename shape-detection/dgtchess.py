@@ -174,27 +174,58 @@ for e in itl.product(*pnts_lists):
 
 cv2.imshow("LINES",image)
 cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 
 for x in range(0, 1):
-	for y in range(0, 8):
+	for y in range(0, 3):
 		index = y+x*8
-		crop = gray[square_list[index][1]:square_list[index][1]+square_height, square_list[index][0]:square_list[index][0]+square_width]
+		
+		color_crop = image[square_list[index][1]:square_list[index][1]+square_height, square_list[index][0]:square_list[index][0]+square_width]
+		gray_crop = gray[square_list[index][1]:square_list[index][1]+square_height, square_list[index][0]:square_list[index][0]+square_width]
 
+
+
+
+		hsv_img = cv2.cvtColor(color_crop, cv2.COLOR_RGB2HSV);
+
+		# Range for lower red
+		lower_red = np.array([0,50,50])
+		upper_red = np.array([20,255,255])
+		mask1 = cv2.inRange(hsv_img, lower_red, upper_red)
+		 
+		# Range for upper red
+		lower_red = np.array([160,50,50])
+		upper_red = np.array([180,255,255])
+		mask2 = cv2.inRange(hsv_img,lower_red,upper_red)
+		 
+		# Generating the final mask to detect red color
+		mask = mask1+mask2
+
+		#mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3,3),np.uint8))
+		#mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, np.ones((3,3),np.uint8))
+ 
+		mask = cv2.bitwise_not(mask)
+		res = cv2.bitwise_and(hsv_img,hsv_img, mask= mask)
+
+		cv2.imshow("mask", mask)
+		cv2.imshow("HSV", hsv_img)
+		cv2.imshow('res',res)
 		if y%2 == 0 and x%2 == 0:
-			thres, crop = cv2.threshold(crop, min_thresh_binary, 255, cv2.THRESH_BINARY)
+			thres, gray_crop = cv2.threshold(gray_crop, min_thresh_binary, 255, cv2.THRESH_BINARY)
 		elif y%2 == 0 and x%2 != 0:
-			thres, crop = cv2.threshold(crop, min_thresh_binary, 255, cv2.THRESH_BINARY_INV)
+			thres, gray_crop = cv2.threshold(gray_crop, min_thresh_binary, 255, cv2.THRESH_BINARY_INV)
 		elif y%2 != 0 and x%2 == 0:
-			thres, crop = cv2.threshold(crop, min_thresh_binary, 255, cv2.THRESH_BINARY_INV)
+			thres, gray_crop = cv2.threshold(gray_crop, min_thresh_binary, 255, cv2.THRESH_BINARY_INV)
 		elif y%2 != 0 and x%2 != 0:
-			thres, crop = cv2.threshold(crop, min_thresh_binary, 255, cv2.THRESH_BINARY)
+			thres, gray_crop = cv2.threshold(gray_crop, min_thresh_binary, 255, cv2.THRESH_BINARY)
 
-		occupied = check_occupancy(crop)
+		occupied = check_occupancy(gray_crop)
 		print(index)
 		print(str(occupied) + "%")
-		cv2.imshow("Square: " + str(index), crop)
+		cv2.imshow("Square: " + str(index), gray_crop)
 		cv2.waitKey(0)
+		cv2.destroyAllWindows()  
 
 """
 #HSV PProcessing 
