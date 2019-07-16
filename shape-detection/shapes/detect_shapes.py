@@ -2,7 +2,7 @@
 # python detect_shapes.py --image shapes_and_colors.png
 
 # import the necessary packages
-from pyimagesearch.shapedetector import ShapeDetector
+#from shapes.shapedetector import ShapeDetector
 import argparse
 import imutils
 import cv2
