@@ -17,6 +17,19 @@ min_thresh_binary = 127
 sqbor_ratio = 0.2
 thres_occ = 4.0
 verbose = False
+sq_offset = 5
+
+sq_dict =	{
+  "1": "a",
+  "2": "b",
+  "3": "c",
+  "4": "d",
+  "5": "e",
+  "6": "f",
+  "7": "g",
+  "8": "h",
+}
+
 
 def get_board_array(image):
 
@@ -112,16 +125,15 @@ def get_board_array(image):
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
 	
-	offset = 5
 	rep = [];
 	
-	for x in range(0, 8      ):
+	for x in range(0, 8):
 		for y in range(0, 8):
 			index = y+x*8
 			
-			color_crop = image[square_list[index][1]+offset:square_list[index][1]+square_height-offset, square_list[index][0]+offset:square_list[index][0]+square_width-offset]
-			gray_crop = gray[square_list[index][1]+offset:square_list[index][1]+square_height-offset, square_list[index][0]+offset:square_list[index][0]+square_width-offset]
-			edged_crop = edged[square_list[index][1]+offset:square_list[index][1]+square_height-offset, square_list[index][0]+offset:square_list[index][0]+square_width-offset]
+			color_crop = image[square_list[index][1]+sq_offset:square_list[index][1]+square_height-sq_offset, square_list[index][0]+sq_offset:square_list[index][0]+square_width-sq_offset]
+			gray_crop = gray[square_list[index][1]+sq_offset:square_list[index][1]+square_height-sq_offset, square_list[index][0]+sq_offset:square_list[index][0]+square_width-sq_offset]
+			edged_crop = edged[square_list[index][1]+sq_offset:square_list[index][1]+square_height-sq_offset, square_list[index][0]+sq_offset:square_list[index][0]+square_width-sq_offset]
 	
 	
 	
@@ -197,8 +209,8 @@ def get_corners(gray):
 	#here u can get corners
 	
 	
-	res = np.hstack((centroids,corners)) 
-	res = np.int0(res) 
+	#res = np.hstack((centroids,corners)) 
+	#res = np.int0(res) 
 
 	x_min = min(corners, key = lambda t: t[0])[0]
 	x_max = max(corners, key = lambda t: t[0])[0]
@@ -266,8 +278,15 @@ dest_row = dest%8
 dest_row = 8 - dest_row
 
 
-print(or_row, or_col)
-print(dest_row, dest_col)
+print(or_col, or_row)
+print(dest_col, dest_row)
+
+pyboard = chess.Board()
+print(pyboard)
+move = sq_dict[str(or_col)] + str(or_row) + sq_dict[str(dest_col)] + str(dest_row)
+ac = chess.Move.from_uci(move)
+pyboard.push(ac)
+print(pyboard)
 
 
 
