@@ -48,7 +48,7 @@ def get_board_array(image):
 		cv2.waitKey(0)
 	
 	
-	x, y, w, h = crop_border(gray)
+	x, y, w, h = crop_image_border(gray)
 	
 	image = image[y:y+h, x:x+w]
 	gray = gray[y:y+h, x:x+w]
@@ -175,7 +175,7 @@ def get_board_array(image):
 
 
 
-def crop_border(param): 
+def crop_image_border(param): 
 	box = cv2.threshold(param, min_thresh_binary, max_thresh, cv2.THRESH_BINARY)[1]
 	if verbose: 
 		cv2.imshow("box", box)
