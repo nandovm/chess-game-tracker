@@ -10,15 +10,19 @@ from matplotlib import pyplot as plt
 from pylsd.lsd import lsd
 
 
+verbose = False
+
 img_width = 600
+
 max_thresh = 255
 min_thresh_otsu = 0
 min_thresh_binary = 127
-sqbor_ratio = 0.2
-thres_occ = 4.0
-verbose = False
-sq_offset = 5
 
+thres_occ = 4.0
+
+sqbor_ratio = 0.2
+
+sq_offset = 5
 sq_dict =	{
   "1": "a",
   "2": "b",
@@ -34,11 +38,10 @@ sq_dict =	{
 def get_board_array(image):
 
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	blurred = cv2.bilateralFilter(gray, 15, 80, 80)
+	#blurred = cv2.bilateralFilter(gray, 15, 80, 80)
 	
 	
 	
-	threshold, res = cv2.threshold(gray, 0, max_thresh, cv2.THRESH_OTSU)
 	
 	if verbose :
 		cv2.imshow('Normal', gray)
@@ -75,6 +78,9 @@ def get_board_array(image):
 	
 	image = image[int(desp):int(img_height-desp), int(desp):int(img_width-desp)]
 	gray = gray[int(desp):int(img_height-desp), int(desp):int(img_width-desp)]
+
+
+	threshold, res = cv2.threshold(gray, min_thresh_otsu, max_thresh, cv2.THRESH_OTSU)
 	edged = cv2.Canny(gray, threshold*0.33, threshold, apertureSize = 3, L2gradient = False)
 	
 	if verbose :
