@@ -6,11 +6,13 @@ import numpy as np
 import random as rng
 import itertools as itl
 import chess
+from collections import deque
 from matplotlib import pyplot as plt
 from pylsd.lsd import lsd
 
 
 verbose = False
+verbose_extra = False
 
 img_width = 600
 
@@ -18,20 +20,20 @@ max_thresh = 255
 min_thresh_otsu = 0
 min_thresh_binary = 127
 
-thres_occ = 4.0
+thres_occ = 3.0
 
 sqbor_ratio = 0.2
 
 sq_offset = 5
 sq_dict =	{
-  "1": "a",
-  "2": "b",
-  "3": "c",
-  "4": "d",
-  "5": "e",
-  "6": "f",
-  "7": "g",
-  "8": "h",
+  "0": "a",
+  "1": "b",
+  "2": "c",
+  "3": "d",
+  "4": "e",
+  "5": "f",
+  "6": "g",
+  "7": "h",
 }
 
 
@@ -43,9 +45,9 @@ def get_board_array(image):
 	
 	
 	
-	if verbose :
-		cv2.imshow('Normal', gray)
-		cv2.waitKey(0)
+	#if verbose :
+	#	cv2.imshow('Normal', gray)
+	#	cv2.waitKey(0)
 	
 	
 	x, y, w, h = crop_image_border(gray)
@@ -91,16 +93,16 @@ def get_board_array(image):
 	
 	
 	key_corners = get_corners(gray)
-	
+	cornered = image.copy()
 	for x in range(0, len(key_corners)):
 	
 			x1, y1 = key_corners[x][0],key_corners[x][1]
 			x2, y2 = key_corners[x][0],key_corners[x][1]
-			cv2.line(image, (x1, y1), (x2, y2), (255, 0, 0),4)
+			cv2.line(cornered, (x1, y1), (x2, y2), (255, 0, 0),4)
 	
 	
 	if verbose :
-		cv2.imshow('Harris',image)
+		cv2.imshow('Harris',cornered)
 		cv2.waitKey(0)
 	
 	x_list = []
@@ -108,15 +110,15 @@ def get_board_array(image):
 	
 	square_width = int(gray.shape[1]/8)
 	square_height = int(gray.shape[0]/8)
-	
+	lined = image.copy()
 	for x in range(0,9):
 		new_x = square_width*x
-		cv2.line(image, (new_x, 0), (new_x, gray.shape[0]), (255, 255, 0), 2)
+		cv2.line(lined, (new_x, 0), (new_x, gray.shape[0]), (255, 255, 0), 2)
 		if x!=8:
 			x_list.append(new_x)
 	for y in range(0,9):
 		new_y = square_height*y
-		cv2.line(image, (0, new_y), (gray.shape[1], new_y), (255, 255, 0), 2)
+		cv2.line(lined, (0, new_y), (gray.shape[1], new_y), (255, 255, 0), 2)
 		if y != 8:
 			y_list.append(new_y)
 	
@@ -127,7 +129,7 @@ def get_board_array(image):
 		square_list.append(e)
 	
 	if verbose :
-		cv2.imshow("LINES",image)
+		cv2.imshow("LINES",lined)
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
 	
@@ -143,7 +145,7 @@ def get_board_array(image):
 	
 	
 	
-			if verbose :
+			if verbose and verbose_extra:
 				cv2.imshow("CANNY", edged_crop)
 			#cv2.imshow("mask", mask)
 			#cv2.imshow("HSV", hsv_img)
@@ -158,7 +160,7 @@ def get_board_array(image):
 				thres, gray_crop = cv2.threshold(gray_crop, min_thresh_binary, 255, cv2.THRESH_BINARY)
 	
 			occupied_pixs = check_occupancy(edged_crop)
-			if verbose:
+			if verbose and verbose_extra:
 				print(occupied_pixs)
 			
 			if float(occupied_pixs) > thres_occ:
@@ -166,7 +168,7 @@ def get_board_array(image):
 			else:
 				rep.append(0)
 	
-			if verbose :
+			if verbose and verbose_extra:
 				cv2.imshow("Square: " + str(index), gray_crop)
 				cv2.waitKey(0)
 				cv2.destroyAllWindows()
@@ -177,9 +179,9 @@ def get_board_array(image):
 
 def crop_image_border(param): 
 	box = cv2.threshold(param, min_thresh_binary, max_thresh, cv2.THRESH_BINARY)[1]
-	if verbose: 
-		cv2.imshow("box", box)
-		cv2.waitKey(0)
+	#if verbose: 
+	#	cv2.imshow("box", box)
+	#	cv2.waitKey(0)
 	
 	im,contours,hierarchy = cv2.findContours(box,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
@@ -189,9 +191,9 @@ def crop_image_border(param):
 	if verbose:
 		print(len(contours))
 	
-	if verbose:
-		cv2.imshow("pre", param)
-		cv2.waitKey(0)
+	#if verbose:
+	#	cv2.imshow("pre", param)
+	#	cv2.waitKey(0)
 
 	cnt = contours[0] #biggest contour0
 	x,y,w,h = cv2.boundingRect(cnt)
@@ -245,54 +247,74 @@ def check_occupancy(sq_image):
 
 rng.seed(12345)
 
-
+file_index = 1
+imlist = []
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i1", "--image1", required=True,	help="path to the input image")
-ap.add_argument("-i2", "--image2", required=True,	help="path to the input image")
+ap.add_argument("-i", "--image", required=True,	help="path to the input image")
+#ap.add_argument("-i2", "--image_next", required=True,	help="path to the input image")
 args = vars(ap.parse_args())
 
 # load the image and resize it to a smaller factor so that
 # the shapes can be approximated better
-image1 = cv2.imread(args["image1"])
-image1 = imutils.resize(image1, width=img_width)
+image_ini = cv2.imread(args["image"] + "_ini.png")
+image_ini = imutils.resize(image_ini, width=img_width)
+imlist.append(image_ini)
 
-image2 = cv2.imread(args["image2"])
-image2 = imutils.resize(image2, width=img_width)
 
-model = cv2.imread('images/model.jpg',0)
-model = imutils.resize(model, width=img_width)
+image_next = cv2.imread(args["image"] + "_m" + str(file_index) + ".png")
 
+
+while image_next is not None:
+	image_next = imutils.resize(image_next, width=img_width)
+	imlist.append(image_next)
+	file_index+=1
+	image_next = cv2.imread(args["image"] + "_m" + str(file_index) + ".png")
+
+
+
+imqueue = deque(imlist)
+#model = cv2.imread('images/model.jpg',0)
+#model = imutils.resize(model, width=img_width)
+#print(len(imqueue))
 #blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
-board1 = get_board_array(image1)
-board2 = get_board_array(image2)
-
-npboard1 = np.asarray(board1)
-npboard2 = np.asarray(board2)
-position = npboard1 - npboard2
-
-origin = np.where(position == 1)[0][0]
-dest = np.where(position == -1)[0][0]
-
-or_col = int(round(origin/8))
-or_row = origin%8
-or_row = 8 - or_row
-
-dest_col = int(round(dest/8))
-dest_row = dest%8
-dest_row = 8 - dest_row
-
-
-print(or_col, or_row)
-print(dest_col, dest_row)
-
+image_ini = imqueue.popleft()
 pyboard = chess.Board()
-print(pyboard)
-move = sq_dict[str(or_col)] + str(or_row) + sq_dict[str(dest_col)] + str(dest_row)
-ac = chess.Move.from_uci(move)
-pyboard.push(ac)
-print(pyboard)
+
+while imqueue:
+	image_next = imqueue.popleft() 
+
+	board_ini = get_board_array(image_ini)
+	board_next = get_board_array(image_next)
+	
+	npboard_ini = np.asarray(board_ini)
+	npboard_next = np.asarray(board_next)
+	position = npboard_ini - npboard_next
+	
+	origin = np.where(position == 1)[0][0]
+	dest = np.where(position == -1)[0][0]
+
+	or_col = int(origin/8)
+	or_row = 8 - origin%8
+
+	dest_col = int(dest/8)
+	dest_row = 8 - dest%8
+	print("------------------------")
+	print("Casilla Origen: " + str((sq_dict[str(or_col)] , or_row)))
+	print("Casilla Destino: " + str((sq_dict[str(dest_col)], dest_row)))
+	print("------------------------")
+	print("------------------------")
+	print(pyboard)
+	move = sq_dict[str(or_col)] + str(or_row) + sq_dict[str(dest_col)] + str(dest_row)
+	crrnt_move = chess.Move.from_uci(move)
+	pyboard.push(crrnt_move)
+	print("------------------------")
+	print("------------------------")
+	print(pyboard)
+	print("------------------------")
+	print("<<==============================================================>>")
+	image_ini = image_next
 
 
 
