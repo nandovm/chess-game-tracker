@@ -520,3 +520,64 @@ def thresh_callback_ell(val):
 		cv2.imshow("LINES", resized)
 		cv2.waitKey(0)
 """
+
+
+"""
+#HSV PProcessing 
+hsv_img = cv2.cvtColor(image, cv2.COLOR_RGB2HSV);
+cv2.imshow("HSV", hsv_img)
+cv2.waitKey(0);
+#ratio = image.shape[0] / float(resized.shape[0])
+
+lower_red = np.array([0,0,0])
+upper_red = np.array([255,255,100])
+mask = cv2.inRange(hsv_img, lower_red, upper_red)
+
+cv2.imshow("Mask HSV", mask)
+cv2.waitKey(0)
+"""
+
+#NEW CONTOURS ON CROPPED IMAGE
+#new = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)[1]
+#im,contours,hierarchy = cv2.findContours(new,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+#contours = sorted(contours, key = cv2.contourArea, reverse = True)[:10]
+#print(contours)
+#cv2.drawContours(image, contours, 0, (0,255,0), 2)
+#cv2.imshow("DEEs", image)
+#cv2.waitKey(0)
+
+#CLAHE ALGORITHM
+#clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8)) 
+#gray = clahe.apply(gray)
+
+
+#CHESSBOARDCORNERS
+#found, pnts = cv2.findChessboardCorners(model, (7,7))
+#print(found)
+#copy = model.copy()
+#cv2.drawChessboardCorners(copy, (7,7), pnts , found)
+#cv2.imshow('ModelPoints', copy)
+#cv2.waitKey(0)
+
+
+        #hsv_img = cv2.cvtColor(color_crop, cv2.COLOR_RGB2HSV);
+
+        # Range for lower red
+        #lower_red = np.array([240,50,50])
+        #upper_red = np.array([300,255,255])
+        #mask1 = cv2.inRange(hsv_img, lower_red, upper_red)
+         
+        ## Range for upper red
+        #lower_red = np.array([160,50,50])
+        #upper_red = np.array([180,255,255])
+        #mask2 = cv2.inRange(hsv_img,lower_red,upper_red)
+        # 
+        # Generating the final mask to detect red color
+        #mask = mask1+mask2
+
+        #mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3,3),np.uint8))
+        #mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, np.ones((3,3),np.uint8))
+ 
+        #mask = cv2.bitwise_not(mask)
+        #res = cv2.bitwise_and(hsv_img,hsv_img, mask= mask)
+
