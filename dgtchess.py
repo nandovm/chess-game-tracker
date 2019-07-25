@@ -80,12 +80,11 @@ def get_crop_points(param):
 	im,contours,hierarchy = cv2.findContours(box,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
 	contours = sorted(contours, key = cv2.contourArea, reverse = True)
-	cv2.drawContours(param, contours, -1, (0,255,0), 2)
+	cv2.drawContours(param, contours, -1, (0,255,0), 4)
 	
 	if verbose:
-		cv2.imshow("Countours", param)
+		cv2.imshow("Countours Found: " + str(len(contours)), param)
 		cv2.waitKey(0)
-		print("Countours Length" + str(len(contours)))
 	
 
 	cnt = contours[0] #biggest contour0
@@ -262,16 +261,16 @@ def get_board_array(image):
 
 			if y%2 == 0 and x%2 == 0:
 				thres, gray_crop = cv2.threshold(gray_crop, 127, 255, cv2.THRESH_BINARY)
-				print(1)
+				if verbose: print(1)
 			elif y%2 == 0 and x%2 != 0:
 				thres, gray_crop = cv2.threshold(gray_crop, 0, 255, cv2.THRESH_BINARY_INV)
-				print(2)
+				if verbose: print(2)
 			elif y%2 != 0 and x%2 == 0:
 				thres, gray_crop = cv2.threshold(gray_crop, 50, 210, cv2.THRESH_BINARY)
-				print(3)
+				if verbose: print(3)
 			elif y%2 != 0 and x%2 != 0:
 				thres, gray_crop = cv2.threshold(gray_crop, 0, 127, cv2.THRESH_BINARY)
-				print(4)
+				if verbose: print(4)
 	
 			occupied_pixs = check_occupancy(edged_crop)
 
