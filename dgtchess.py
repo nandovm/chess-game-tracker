@@ -13,7 +13,8 @@ from pylsd.lsd import lsd
 
 verbose = True
 verbose_extra = True
-
+alpha = 2.5 # Simple contrast control
+beta = 5  # Simple brightness control
 #0.5 or 0.33
 canny_ratio = 0.5
 
@@ -82,6 +83,8 @@ def get_crop_points(param):
 	cv2.drawContours(param, contours, -1, (0,255,0), 2)
 	
 	if verbose:
+		cv2.imshow("Countours", param)
+		cv2.waitKey(0)
 		print("Countours Length" + str(len(contours)))
 	
 
@@ -117,9 +120,10 @@ def crop_board_border(image, gray):
 
 	return image, gray
 
-def get_histo_n_transf(image, gray):
+def get_histo_n_transf(gray):
 
-	#HISTOGRAM
+
+	##HISTOGRAM
 	hist,bins = np.histogram(gray.flatten(),256,[0,256])
 	cdf = hist.cumsum()
 	cdf_normalized = cdf * hist.max()/ cdf.max()
@@ -130,10 +134,12 @@ def get_histo_n_transf(image, gray):
 	
 	kernel = np.ones((7,7),np.uint8)
 	
-	#gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
-	gray = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+	#blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 
-	return image, gray
+	#blurred = cv2.morphologyEx(blurred, cv2.MORPH_OPEN, kernel)
+	#blurred = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
+
+	return gray
 
 def get_n_draw_corners(image):
 	ngray = np.float32(image.copy())
@@ -178,9 +184,17 @@ def get_n_draw_corners(image):
 
 def get_board_array(image):
 
+
+	if verbose :
+		cv2.imshow('No sharpening Image', image)
+		cv2.waitKey(0)
+
+	image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)	
+	image = cv2.bilateralFilter(image, 7, 50, 50)
+	#image = cv2.GaussianBlur(image, (3, 3), 0)
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-	x, y, w, h = get_crop_points(gray)
+	x, y, w, h = get_crop_points(gray.copy())
 	
 	image = image[y:y+h, x:x+w]
 	gray = gray[y:y+h, x:x+w]
@@ -198,14 +212,14 @@ def get_board_array(image):
 		cv2.waitKey(0)
 
 
-	image, trans  = get_histo_n_transf(image.copy(), cropped.copy())
-
+	#trans  = get_histo_n_transf(cropped.copy())
+	trans = cropped.copy()
 	square_width = int(image.shape[1]/8)
 	square_height = int(image.shape[0]/8)	
 
 	threshold, _ = cv2.threshold(trans, min_thresh_otsu, max_thresh, cv2.THRESH_OTSU)
 
-	edged = cv2.Canny(trans, threshold*canny_ratio, threshold, apertureSize = 3, L2gradient = False)
+	edged = cv2.Canny(trans, threshold*canny_ratio, threshold, apertureSize = 3, L2gradient = True)
 
 	if verbose :
 		cv2.imshow('Histogramed and Transformed', trans)
@@ -256,10 +270,10 @@ def get_board_array(image):
 				thres, gray_crop = cv2.threshold(gray_crop, 50, 210, cv2.THRESH_BINARY)
 				print(3)
 			elif y%2 != 0 and x%2 != 0:
-				thres, gray_crop = cv2.threshold(gray_crop, 0, 127, cv2.THRESH_BINARY_INV)
+				thres, gray_crop = cv2.threshold(gray_crop, 0, 127, cv2.THRESH_BINARY)
 				print(4)
 	
-			occupied_pixs = check_occupancy(gray_crop)
+			occupied_pixs = check_occupancy(edged_crop)
 
 
 			if verbose and verbose_extra:
