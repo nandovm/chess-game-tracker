@@ -1,0 +1,24 @@
+Sobre capturer:
+
+el capturador funciona separado en un hilo. se encarga de seleccionar imagenes en las que ha cambiado la posicion del tablero
+al principio funcionaba lento con compare_ssmi pero al cambiarlo a diferencias por histograma va mucho mas rapido.
+para la deteccion de la mano se comparan los valores de la diferencia de histograma, de tal manera que si el valor ha cambiado "demasiado"
+significa que en el frame anterior la mano aparece (o desaparece)
+Este enfoque trae problemas ya que detecta cambios bruscos aun cuando la mano no ha desaparecido, ya que esta se desplaza verticalmente por el tablerO
+
+
+2.84207404713
+AKI
+ANYADE6.20239122396
+2.6287367952
+1.90718057201
+SWITCH
+2.27338603385
+AKI
+2.83637505133
+AKI
+1.85023829772
+AKI
+2.3797
+
+ 
