@@ -10,17 +10,22 @@ import numpy as np
 import argparse
 import cv2
 import chess
+import time
 
 def main():
 	src = "/home/sstuff/Escritorio/ws/dgtchess/videos/real1.MOV"
 	video_capturer = Capturer(src).start()
+
+	start = time.time()
 	while True:
 		if video_capturer.stopped:
 			break
+	end = time.time()
+	print(end - start)
 	print(len(video_capturer.image_list))
-	for x in range(0, len(video_capturer.image_list)):
-		cv2.imshow(str(x), video_capturer.image_list[x])
-		cv2.waitKey(0)
+	#for x in range(0, len(video_capturer.image_list)):
+	#	cv2.imshow(str(x), video_capturer.image_list[x])
+	#	cv2.waitKey(0)
 
 #	src = "/home/sstuff/Escritorio/ws/dgtchess/videos/frame"
 #	srcA = src + str(1) + ".png"
