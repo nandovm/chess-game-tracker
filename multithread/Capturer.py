@@ -2,73 +2,59 @@ from threading import Thread
 from skimage.measure import compare_ssim
 import imutils
 import cv2
+import sys
+# import the Queue class from Python 3
+if sys.version_info >= (3, 0):
+	from queue import Queue
+ 
+# otherwise, import the Queue class for Python 2.7
+else:
+	from Queue import Queue
+
 
 class Capturer:
-    """
-    Class that continuously gets frames from a VideoCapture object
-    with a dedicated thread.
-    """
+	def __init__(self, src=0):
 
+		self.stream = cv2.VideoCapture(src)
 
-    def __init__(self, src=0):
-        self.old_score = 0.02
-        self.switch = True
-        self.stream = cv2.VideoCapture(src)      
-        self.thres = 0.09                    
-        (self.grabbed, self.image_ini) = self.stream.read()
-        self.image_ini = imutils.resize(self.image_ini, width=400)
-        self.hist1 = cv2.calcHist([self.image_ini],[0],None,[256],[0,256])
-        self.image_next = self.image_ini
-        self.image_list = [self.image_ini]
-        self.stopped = False
-        self.rise = False
-        self.doublerise=False
+		self.stopped = False
 
-    def start(self):    
-        Thread(target=self.get, args=()).start()
-        return self
+		self.Q = Queue(maxsize=100)
 
-    def get(self):
+	def start(self):
+		t = Thread(target=self.get, args=())
+		t.daemon = True
+		t.start()
+		return self
 
+	def get(self):
 
-        while not self.stopped:
-            if not self.grabbed:
-                
-                self.stop()
-            else:
-                (self.grabbed, self.image_next) = self.stream.read()
-                if self.grabbed: #para la ultima lectura
-                    self.image_next = imutils.resize(self.image_next, width=400)
-                    new_score = self.get_ssmi(imageA = self.image_ini, imageB = self.image_next)
-                    if self.switch: #subida
-                        if abs(new_score*100 - self.old_score*100) > 2.5:
-                            self.switch = not self.switch
-                    else:
-                        if abs(new_score*100 - self.old_score*100) < 0.5: #cuanto mas bajo mas similares deben ser las imagenes
-                            self.image_list.append(self.image_next)
-                            
-                            self.image_ini = self.image_next
-                            (self.grabbed, self.image_next) = self.stream.read()
-                            self.image_next = imutils.resize(self.image_next, width=400)
-                            self.hist1 = cv2.calcHist([self.image_ini],[0],None,[256],[0,256])
-                            self.old_score = self.get_ssmi(imageA = self.image_ini, imageB = self.image_next)
-                            self.switch = not self.switch
-                            
-    def stop(self):
-            self.stopped = True
+	# keep looping infinitely
+		while True:
+			# if the thread indicator variable is set, stop the
+			# thread
+			if self.stopped:
+				return
+			# otherwise, ensure the queue has room in it
+			if not self.Q.full():
+				# read the next frame from the file
+				(grabbed, frame) = self.stream.read()
+				# if the `grabbed` boolean is `False`, then we have
+				# reached the end of the video file
+				if not grabbed:
+					self.stop()
+					return
+				# add the frame to the queue
+				self.Q.put(frame)
 
-    def get_ssmi(self, imageA, imageB):
+	def stop(self):
+		self.stopped = True
 
-        self.hist2 = cv2.calcHist([imageB],[0],None,[256],[0,256])
-        # compute the Structural Similarity Index (SSIM) between the two
-        # images, ensuring that the difference image is returned
-        #(score, diff) = compare_ssim(grayA, grayB, full=True)
-        #iff = (diff * 255).astype("uint8")
-        score = cv2.compareHist(self.hist1,self.hist2,cv2.HISTCMP_BHATTACHARYYA)
-        return score
+	def more(self):
+		# return True if there are still frames in the queue
+		return self.Q.qsize() > 0
 
-def main():
-    src = "/home/sstuff/Escritorio/ws/dgtchess/videos/real1.MOV"
-    video_capturer = Capturer(src).get()
+	def read(self):
+	# return next frame in the queue
+		return self.Q.get()
 
-main()

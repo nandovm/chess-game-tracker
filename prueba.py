@@ -12,39 +12,50 @@ import cv2
 import chess
 import time
 
+
+def get_ssmi( histimageA, imageB):
+    hist2 = cv2.calcHist([imageB],[0],None,[256],[0,256])
+    score = cv2.compareHist(histimageA, hist2,cv2.HISTCMP_BHATTACHARYYA)
+    return score
+
 def main():
+	start = time.time()
+	print("START")
+	switch = True
+	old_score = 0.02
+	
 	src = "/home/sstuff/Escritorio/ws/dgtchess/videos/real1.MOV"
 	video_capturer = Capturer(src).start()
 
-	start = time.time()
-	while True:
-		if video_capturer.stopped:
-			break
-	end = time.time()
-	print(end - start)
-	print(len(video_capturer.image_list))
-	#for x in range(0, len(video_capturer.image_list)):
-	#	cv2.imshow(str(x), video_capturer.image_list[x])
-	#	cv2.waitKey(0)
+	time.sleep(1.0)
 
-#	src = "/home/sstuff/Escritorio/ws/dgtchess/videos/frame"
-#	srcA = src + str(1) + ".png"
-#	imageA = cv2.imread(srcA)
-#	hist1 = cv2.calcHist([imageA],[0],None,[256],[0,256])
-#	for x in range(0, 37):
-#		srcB = src + str(x+2) + ".png"
-#		imageB = cv2.imread(srcB)		
-#		hist2 = cv2.calcHist([imageB],[0],None,[256],[0,256])
-#		grayB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY)
-#		grayA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY)
-#		# compute the Structural Similarity Index (SSIM) between the two
-#		# images, ensuring that the difference image is returned
-#		#(score, diff) = compare_ssim(grayA, grayB, full=True)
-#		#diff = (diff * 255).astype("uint8")
-#		#score = cv2.compareHist(hist1,hist2,cv2.HISTCMP_BHATTACHARYYA)
-#		grayA =  grayA/np.sqrt(np.sum(grayA*grayA))
-#		score = np.sum(grayA*grayA)
-#		
-#		print("Frame 1 vs Frame" + str(x+2) + ": " + str(score))
+	image_ini = video_capturer.read()
+	image_ini = imutils.resize(image_ini, width=400)
+	hist_image_ini =  cv2.calcHist([image_ini],[0],None,[256],[0,256])
+	image_list = [image_ini]
+	cont = 0
+	while(video_capturer.more()):
+		image_next = video_capturer.read()
+		
+		image_next = imutils.resize(image_next, width=400)
+		new_score = get_ssmi(histimageA = hist_image_ini, imageB = image_next)
+		if switch: #subida
+			if abs(new_score*100 - old_score*100) > 2.5:
+				switch = not switch
+		else:
+			if abs(new_score*100 - old_score*100) < 0.5: #cuanto mas bajo mas similares deben ser las imagenes
+				image_list.append(image_next)
+				image_ini = image_next
+				image_next = video_capturer.read()
+				image_next = imutils.resize(image_next, width=400)
+				hist_image_ini = cv2.calcHist([image_ini],[0],None,[256],[0,256])
+				old_score = get_ssmi(histimageA = hist_image_ini, imageB = image_next)
+				switch = not switch
+		cont +=1
+
+	end = time.time()
+	print("Recogidas " + str(len(image_list)) + " imagenes relevantes.")
+	print("Se ha tardado :" + str(end - start) + "seg")
+
 
 main()

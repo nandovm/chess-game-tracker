@@ -22,19 +22,23 @@ class Processor:
 			"6": "g",
 			"7": "h",
 		}
-		self.verbose = False
-		self.verbose_extra = True
+		self.verbose = True
+		self.verbose_extra = False
 		self.alpha = 2.5 # Simple contrast control
 		self.beta = 5  # Simple brightness control
-		self.canny_ratio = 0.5
-		self.img_width = 600
+		self.canny_ratio = 0.33
+		self.img_width = img_width
 		self.max_thresh = 255
 		self.min_thresh_otsu = 0
 		self.min_thres_offset = -127
 		self.min_thresh_binary = 127
-		self.thres_occ = 3.0
-		self.sqbor_ratio = 0.2
-		self.sq_offset = 8
+		self.thres_occ = 5.4
+		self.sqbor_ratio = 0.1
+		self.sq_offset = 8 #centrado de casilla
+		self.x = -1
+		self.y = -1
+		self.w = -1
+		self.h = -1
 
 	def get_n_draw_squares(self, lined, square_width, square_height):
 	
@@ -80,8 +84,7 @@ class Processor:
 		
 	
 		cnt = contours[0] #biggest contour0
-		x,y,w,h = cv2.boundingRect(cnt)
-		return x,y,w,h
+		self.x,self.y,self.w,self.h = cv2.boundingRect(cnt)
 	
 	
 	
@@ -127,7 +130,7 @@ class Processor:
 		
 		#blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 	
-		#blurred = cv2.morphologyEx(blurred, cv2.MORPH_OPEN, kernel)
+		#blurred = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
 		#blurred = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
 	
 		return gray
@@ -180,15 +183,17 @@ class Processor:
 			cv2.imshow('No sharpening Image', image)
 			cv2.waitKey(0)
 	
+		unm_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 		image = cv2.convertScaleAbs(image, alpha=self.alpha, beta=self.beta)	
 		image = cv2.bilateralFilter(image, 7, 50, 50)
 		#image = cv2.GaussianBlur(image, (3, 3), 0)
 		gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	
-		x, y, w, h = self.get_crop_points(gray.copy())
 		
-		image = image[y:y+h, x:x+w]
-		gray = gray[y:y+h, x:x+w]
+		if self.x == -1:
+			self.get_crop_points(unm_gray.copy())
+		
+		image = image[self.y:self.y+self.h, self.x:self.x+self.w]
+		gray = gray[self.y:self.y+self.h, self.x:self.x+self.w]
 		
 	
 		if self.verbose :
@@ -203,8 +208,8 @@ class Processor:
 			cv2.waitKey(0)
 	
 	
-		#trans  = get_histo_n_transf(cropped.copy())
-		trans = cropped.copy()
+		trans  = self.get_histo_n_transf(gray = cropped.copy())
+		#trans = cropped.copy()
 		square_width = int(image.shape[1]/8)
 		square_height = int(image.shape[0]/8)	
 	
@@ -242,15 +247,30 @@ class Processor:
 	
 				index = y+x*8
 				
-				#color_crop = image[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
-				#gray_crop = trans[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
 				edged_crop = edged[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
-		
-		
-		
-				if self.verbose and self.verbose_extra:
-					cv2.imshow("CANNY", edged_crop)
+
+				occupied_pixs = self.check_occupancy(edged_crop)
 	
+	
+				if self.verbose:
+					print("Square " + str(index) + ": " + str(occupied_pixs))
+					if self.verbose_extra:
+						cv2.imshow(str(index), edged_crop)
+						cv2.waitKey(0)
+						cv2.destroyAllWindows()
+				
+				if float(occupied_pixs) > self.thres_occ:
+					rep.append(1)
+				else:
+					rep.append(0)
+		
+				#if self.verbose and self.verbose_extra:
+				#	cv2.imshow("Square: " + str(index), gray_crop)
+				#	cv2.waitKey(0)
+				#	cv2.destroyAllWindows()
+	
+		return rep
+
 				#if y%2 == 0 and x%2 == 0:
 				#	thres, gray_crop = cv2.threshold(gray_crop, 127, 255, cv2.THRESH_BINARY)
 				#	if self.verbose: print(1)
@@ -264,20 +284,3 @@ class Processor:
 				#	thres, gray_crop = cv2.threshold(gray_crop, 0, 127, cv2.THRESH_BINARY)
 				#	if self.verbose: print(4)
 		
-				occupied_pixs = self.check_occupancy(edged_crop)
-	
-	
-				if self.verbose and self.verbose_extra:
-					print("Square " + str(index) + ": " + str(occupied_pixs))
-				
-				if float(occupied_pixs) > self.thres_occ:
-					rep.append(1)
-				else:
-					rep.append(0)
-		
-				if self.verbose and self.verbose_extra:
-					cv2.imshow("Square: " + str(index), gray_crop)
-					cv2.waitKey(0)
-					cv2.destroyAllWindows()
-	
-		return rep
