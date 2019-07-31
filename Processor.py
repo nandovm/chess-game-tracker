@@ -22,11 +22,11 @@ class Processor:
 			"6": "g",
 			"7": "h",
 		}
-		self.verbose = True
+		self.verbose = False
 		self.verbose_extra = False
 		self.alpha = 2.5 # Simple contrast control
 		self.beta = 5  # Simple brightness control
-		self.canny_ratio = 0.33
+		self.canny_ratio = 0.33  
 		self.img_width = img_width
 		self.max_thresh = 255
 		self.min_thresh_otsu = 0
@@ -208,8 +208,8 @@ class Processor:
 			cv2.waitKey(0)
 	
 	
-		trans  = self.get_histo_n_transf(gray = cropped.copy())
-		#trans = cropped.copy()
+		#trans  = self.get_histo_n_transf(gray = cropped.copy())
+		trans = cropped.copy()
 		square_width = int(image.shape[1]/8)
 		square_height = int(image.shape[0]/8)	
 	

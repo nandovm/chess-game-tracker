@@ -23,6 +23,7 @@ se han vuelto a cambiar canny ratio de 0.5 a 0.33, se han tuneado los parametros
 el siguiente paso consiste en suavizar o hacer desaparecer las sombras
 ademas en la zona de las piezas negras, algunas se confunden con el fondo negro y a la hora de realziar canny no se detectan apenas ejes.
 para solucionar esto se ha creado un metodo que recupera una mascara de piezas blancas y otra de piezas negras para resaltar los lpizeles de todas las piezas
+si este metodo funciona se podrán ignorar las sombras, ya que la densidad de pizeles en las piezas habrá aumentado considerablemente
 
 
 sobre dgtchessCore:

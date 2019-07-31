@@ -151,6 +151,7 @@ def prueba():
 	cv2.waitKey(0)
 
 	return 0
+
 @njit
 def get_whitepiecies_mask(image):
 	# grab the image dimensions
@@ -161,7 +162,7 @@ def get_whitepiecies_mask(image):
 	for y in range(0, h):
 		for x in range(0, w):
 		# threshold the pixel
-			image[y, x] = 0 if image[y, x] >= 80  and image[y, x] < 120 else 255
+			image[y, x] = 0 if image[y, x] >= 87  and image[y, x] < 90  else 255
 	
 	# return the thresholded image
 	return image
@@ -176,19 +177,23 @@ def get_blackpiecies_mask(image):
 	for y in range(0, h):
 		for x in range(0, w):
 		# threshold the pixel
-			image[y, x] = 0 if image[y, x] >= 0  and image[y, x] < 20 else 255
+			image[y, x] = 0 if image[y, x] >= 3  and image[y, x] < 5 else 255
 	
 	# return the thresholded image
 	return image
 
 
 def prueba2():
-	alpha = 0.5
+	proc = Processor(img_width=400);
+	alpha = 0.8
 	img = cv2.imread("/home/sstuff/Escritorio/ws/dgtchess/images/real/real_above_ini.png")
 	img = imutils.resize(img, width=400)
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
+	gray=proc.get_histo_n_transf(gray.copy())
+
 	cv2.imshow("", gray)
 	cv2.waitKey(0)
+
 	black_mask = get_blackpiecies_mask(gray.copy())
 	cv2.imshow("", black_mask)
 	cv2.waitKey(0)
@@ -239,7 +244,7 @@ def prueba2():
 	#cv2.imshow('shadows_out_norm.png', result_norm)
 	#cv2.waitKey(0)
 
-prueba2()
+mainProcess()
 
 
 
