@@ -23,9 +23,21 @@ se han vuelto a cambiar canny ratio de 0.5 a 0.33, se han tuneado los parametros
 el siguiente paso consiste en suavizar o hacer desaparecer las sombras
 ademas en la zona de las piezas negras, algunas se confunden con el fondo negro y a la hora de realziar canny no se detectan apenas ejes.
 para solucionar esto se ha creado un metodo que recupera una mascara de piezas blancas y otra de piezas negras para resaltar los lpizeles de todas las piezas
-si este metodo funciona se podrán ignorar las sombras, ya que la densidad de pizeles en las piezas habrá aumentado considerablemente
+si este metodo funciona se podrán ignorar las sombras, ya que la densidad de pixeles en las piezas habrá aumentado considerablemente
+
+la mascara de peizas negras ya esta ajustada, para la blanca debemos invertir la imagen y usar la mascara para negras?? (probar)
 
 
 sobre dgtchessCore:
 
 se ha pasado la logica de fitlrado desde capturer a dgtchess.py, se han añadido una funcion para realziar pruebas 
+
+
+1/8/19
+
+Processor:
+
+se han añadido los metodos de recuperar la mascara a la clase Procesor. ademas se han cambiado para realizar un filtrado por color sobre imagenes HSV,
+el cual da mucho mejor resultado a la hora de detectar todas las piezas.
+
+se ha cambiado el metodo de deteccion utilizando las nuevas mascaras y funciona mucho mejor
