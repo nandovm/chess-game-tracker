@@ -41,3 +41,4 @@ se han añadido los metodos de recuperar la mascara a la clase Procesor. ademas 
 el cual da mucho mejor resultado a la hora de detectar todas las piezas.
 
 se ha cambiado el metodo de deteccion utilizando las nuevas mascaras y funciona mucho mejor
+se ha limpiado el código y refactorizado para quitar lo que ya no es necesario

@@ -24,21 +24,17 @@ class Processor:
 		}
 		self.verbose = False
 		self.verbose_extra = False
-		self.alpha = 2.5 # Simple contrast control
-		self.beta = 5  # Simple brightness control
 		self.canny_ratio = 0.33  
+
 		self.img_width = img_width
 		self.max_thresh = 255
 		self.min_thresh_otsu = 0
-		self.min_thres_offset = -127
 		self.min_thresh_binary = 127
 		self.thres_occ = 0.2
 		self.sqbor_ratio = 0.1
 		self.sq_offset = 0 #centrado de casilla
-		self.x = -1
-		self.y = -1
-		self.w = -1
-		self.h = -1
+		self.x_crop = -1
+
 
 	def get_whitepiecies_mask(self, image):
 		hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -106,6 +102,7 @@ class Processor:
 	
 		cnt = contours[0] #biggest contour0
 		self.x,self.y,self.w,self.h = cv2.boundingRect(cnt)
+		self.x_crop = self.x
 	
 	
 	
@@ -135,19 +132,20 @@ class Processor:
 	
 		return image, gray
 	
-	def get_histo_n_transf(self, gray):
+	def get_histo_n_transf(self, gray, apply):
 	
 	
 		##HISTOGRAM
-		hist,bins = np.histogram(gray.flatten(),256,[0,256])
-		cdf = hist.cumsum()
-		cdf_normalized = cdf * hist.max()/ cdf.max()
-		cdf_m = np.ma.masked_equal(cdf,0)
-		cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
-		cdf = np.ma.filled(cdf_m,0).astype('uint8')
-		gray = cdf[gray]
-		
-		kernel = np.ones((7,7),np.uint8)
+		if apply is True:
+			hist,bins = np.histogram(gray.flatten(),256,[0,256])
+			cdf = hist.cumsum()
+			cdf_normalized = cdf * hist.max()/ cdf.max()
+			cdf_m = np.ma.masked_equal(cdf,0)
+			cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
+			cdf = np.ma.filled(cdf_m,0).astype('uint8')
+			gray = cdf[gray]
+			
+			kernel = np.ones((7,7),np.uint8)
 		
 		#blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 	
@@ -203,48 +201,48 @@ class Processor:
 		if self.verbose :
 			cv2.imshow('No sharpening Image', image)
 			cv2.waitKey(0)
-	
-		unm_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-		#image = cv2.convertScaleAbs(image, alpha=self.alpha, beta=self.beta)	
-		#image = cv2.bilateralFilter(image, 7, 50, 50)
-		#image = cv2.GaussianBlur(image, (3, 3), 0)
+
+		#Ya no es necesario por las mascaras blanca y negra
+		"""
+		image = cv2.convertScaleAbs(image, alpha=self.alpha, beta=self.beta)	
+		image = cv2.bilateralFilter(image, 7, 50, 50)
+		image = cv2.GaussianBlur(image, (3, 3), 0)
+		"""
 		gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 		
-		if self.x == -1:
-			self.get_crop_points(unm_gray.copy())
+		if self.x_crop == -1:
+			self.get_crop_points(gray.copy())
 		
 		image = image[self.y:self.y+self.h, self.x:self.x+self.w]
 		gray = gray[self.y:self.y+self.h, self.x:self.x+self.w]
-		unm_gray = unm_gray[self.y:self.y+self.h, self.x:self.x+self.w]
 	
 		if self.verbose :
 			cv2.imshow('Borderless Image', image)
 			cv2.waitKey(0)
 	
 		
-		image, cropped = self.crop_board_border(image.copy(), unm_gray.copy())
+		image, cropped = self.crop_board_border(image.copy(), gray.copy())
 	
 		if self.verbose :
 			cv2.imshow('Borderless Board', cropped)
 			cv2.waitKey(0)
 	
-	
-		#trans  = self.get_histo_n_transf(gray = cropped.copy())
-		trans = cropped.copy()
+		do_transform = False
+		trans  = self.get_histo_n_transf(gray = cropped.copy(), apply = do_transform)
 		square_width = int(image.shape[1]/8)
 		square_height = int(image.shape[0]/8)	
 	
 		threshold, _ = cv2.threshold(trans, self.min_thresh_otsu, self.max_thresh, cv2.THRESH_OTSU)
 	
-		edged = cv2.Canny(trans, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
+		#edged = cv2.Canny(trans, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
 	
-		if self.verbose :
+		if self.verbose and do_transform:
 			cv2.imshow('Histogramed and Transformed', trans)
 			cv2.waitKey(0)
 	
-		if self.verbose :
-			cv2.imshow('Cannied', edged)
-			cv2.waitKey(0)
+		#if self.verbose :
+		#	cv2.imshow('Cannied', edged)
+		#	cv2.waitKey(0)
 		
 		#cornered = self.get_n_draw_corners(cropped.copy())
 		#
@@ -295,24 +293,5 @@ class Processor:
 					rep.append(1)
 				else:
 					rep.append(0)
-		
-				#if self.verbose and self.verbose_extra:
-				#	cv2.imshow("Square: " + str(index), gray_crop)
-				#	cv2.waitKey(0)
-				#	cv2.destroyAllWindows()
 	
 		return rep
-
-				#if y%2 == 0 and x%2 == 0:
-				#	thres, gray_crop = cv2.threshold(gray_crop, 127, 255, cv2.THRESH_BINARY)
-				#	if self.verbose: print(1)
-				#elif y%2 == 0 and x%2 != 0:
-				#	thres, gray_crop = cv2.threshold(gray_crop, 0, 255, cv2.THRESH_BINARY_INV)
-				#	if self.verbose: print(2)
-				#elif y%2 != 0 and x%2 == 0:
-				#	thres, gray_crop = cv2.threshold(gray_crop, 50, 210, cv2.THRESH_BINARY)
-				#	if self.verbose: print(3)
-				#elif y%2 != 0 and x%2 != 0:
-				#	thres, gray_crop = cv2.threshold(gray_crop, 0, 127, cv2.THRESH_BINARY)
-				#	if self.verbose: print(4)
-		
