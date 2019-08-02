@@ -12,16 +12,7 @@ from pylsd.lsd import lsd
 
 class Processor: 
 	def __init__(self, img_width):
-		self.sq_dict =	{
-			"0": "a",
-			"1": "b",
-			"2": "c",
-			"3": "d",
-			"4": "e",
-			"5": "f",
-			"6": "g",
-			"7": "h",
-		}
+
 		self.verbose = False
 		self.verbose_extra = False
 		self.canny_ratio = 0.33  

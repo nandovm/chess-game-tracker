@@ -694,3 +694,22 @@ def prueba3():
     
     cv2.imshow('p003-1.png',r_ti2) #path to directory where image is saved
     cv2.waitKey(0)
+
+
+    """
+#Very FAST For with parallel processing
+@njit
+def fast_for(image):
+    # grab the image dimensions
+    h = image.shape[0]
+    w = image.shape[1]
+    
+    # loop over the image, pixel by pixel
+    for y in range(0, h):
+        for x in range(0, w):
+        # threshold the pixel
+            image[y, x] = 0 if image[y, x] >= 87  and image[y, x] < 90  else 255
+    
+    # return the thresholded image
+    return image
+"""
