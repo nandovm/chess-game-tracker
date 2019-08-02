@@ -50,3 +50,9 @@ sobre dgtchessCore:
 
 se ha sincronizado el hilo de captura con el procesador de imagenes para que cuando se encuentren buenas imagenes consecutivas, se procesen y se muestre el movimiento 
 se ha mejorado la rapidez del metodo resize utilizando interpolacion linear en vez de inter_area, pero al mejorarse la rapidez, la llamada more() al Capturer desde el procesador tambien se acelera y devuelve false en un momento en el cual aun sigue recibiendo imágenes. para solucionar este problema se ha introducido un retarode despues de la visualizacion del movimiento sobre el tablero de un segundo y se ha aumentando el tamaño maximo de la cola de imagenes del capturador. Asi nos aseguramos que la llamada more() siempre devuelve un valor antes de que acabe el video.
+
+Visualizador
+la librearia python-chess dispone de un metodo para renderizar tableros en imagenes svg, intentaremos usar imagemagick para visualizar la imagen
+sudo apt-get install librsvg2-bin necesario para visluzalizar imagenes SVG
+
+Pythonmagick es un wrapper sobre Magick++, la cual usaremos para la visualizacion

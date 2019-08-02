@@ -1,5 +1,6 @@
 from __future__ import division
 from collections import deque
+from IPython.display import SVG, display
 
 from common.Processor import Processor
 from multithread.Capturer import Capturer
@@ -7,10 +8,12 @@ from multithread.Capturer import Capturer
 import random as rng
 import numpy as np
 
+import PythonMagick
 import imutils
 import argparse
 import cv2
 import chess
+import chess.svg
 import time
 
 
@@ -24,6 +27,9 @@ sq_dict =	{
 	"6": "g",
 	"7": "h",
 }
+
+def show_svg(file):
+    display(SVG(file))
 
 def get_ssmi( histimageA, imageB):
 	hist2 = cv2.calcHist([imageB],[0],None,[256],[0,256])
@@ -93,10 +99,12 @@ def main():
 
 				move = get_chessmove(board_ini, board_next)
 
+				show_svg(chess.svg.board(pyboard))
 				print(pyboard)
 				print("<<==============================================================>>")
 				crrnt_move = chess.Move.from_uci(move)
 				pyboard.push(crrnt_move)
+				show_svg(chess.svg.board(pyboard))
 				print(pyboard)
 				print("<<==============================================================>>")
 				time.sleep(1.0)
