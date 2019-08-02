@@ -19,7 +19,7 @@ class Capturer:
 
 		self.stopped = False
 
-		self.Q = Queue(maxsize=100)
+		self.Q = Queue(maxsize=200)
 
 	def start(self):
 		t = Thread(target=self.get, args=())

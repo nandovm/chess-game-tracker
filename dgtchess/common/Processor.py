@@ -11,10 +11,10 @@ from pylsd.lsd import lsd
 
 
 class Processor: 
-	def __init__(self, img_width):
+	def __init__(self, img_width, verbose, extra):
 
-		self.verbose = False
-		self.verbose_extra = False
+		self.verbose = verbose
+		self.verbose_extra = extra
 		self.canny_ratio = 0.33  
 
 		self.img_width = img_width
@@ -25,6 +25,7 @@ class Processor:
 		self.sqbor_ratio = 0.1
 		self.sq_offset = 0 #centrado de casilla
 		self.x_crop = -1
+		self.do_transform = False
 
 
 	def get_whitepiecies_mask(self, image):
@@ -86,7 +87,7 @@ class Processor:
 		contours = sorted(contours, key = cv2.contourArea, reverse = True)
 		cv2.drawContours(param, contours, -1, (0,255,0), 4)
 		
-		if self.verbose:
+		if self.verbose and self.verbose_extra:
 			cv2.imshow("Countours Found: " + str(len(contours)), param)
 			cv2.waitKey(0)
 		
@@ -190,7 +191,7 @@ class Processor:
 	
 	
 		if self.verbose :
-			cv2.imshow('No sharpening Image', image)
+			cv2.imshow('Original Image', image)
 			cv2.waitKey(0)
 
 		#Ya no es necesario por las mascaras blanca y negra
@@ -207,19 +208,19 @@ class Processor:
 		image = image[self.y:self.y+self.h, self.x:self.x+self.w]
 		gray = gray[self.y:self.y+self.h, self.x:self.x+self.w]
 	
-		if self.verbose :
+		if self.verbose and self.verbose_extra:
 			cv2.imshow('Borderless Image', image)
 			cv2.waitKey(0)
 	
 		
 		image, cropped = self.crop_board_border(image.copy(), gray.copy())
 	
-		if self.verbose :
+		if self.verbose and self.verbose_extra:
 			cv2.imshow('Borderless Board', cropped)
 			cv2.waitKey(0)
 	
-		do_transform = False
-		trans  = self.get_histo_n_transf(gray = cropped.copy(), apply = do_transform)
+
+		trans  = self.get_histo_n_transf(gray = cropped.copy(), apply = self.do_transform)
 		square_width = int(image.shape[1]/8)
 		square_height = int(image.shape[0]/8)	
 	
@@ -227,7 +228,7 @@ class Processor:
 	
 		#edged = cv2.Canny(trans, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
 	
-		if self.verbose and do_transform:
+		if self.verbose and self.do_transform:
 			cv2.imshow('Histogramed and Transformed', trans)
 			cv2.waitKey(0)
 	
@@ -243,7 +244,7 @@ class Processor:
 		
 		white = self.get_whitepiecies_mask(image = image.copy())
 
-		if self.verbose :
+		if self.verbose and self.verbose_extra :
 			cv2.imshow('whiteMask', white)
 			cv2.waitKey(0)
 
@@ -253,7 +254,7 @@ class Processor:
 	
 		lined, square_list = self.get_n_draw_squares(image.copy(), square_width, square_height)
 	
-		if self.verbose :
+		if self.verbose and self.verbose_extra :
 			cv2.imshow("LINES",lined)
 			cv2.waitKey(0)
 			cv2.destroyAllWindows()

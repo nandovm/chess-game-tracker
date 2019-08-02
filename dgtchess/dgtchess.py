@@ -48,24 +48,24 @@ def get_chessmove(board_ini, board_next):
 	return move
 
 
-def mainCapture():
+def main():
 	
 	print("START")
 	start = time.time()
 	switch = True
-	old_score = 0.02
+	old_score = 0.03
 	img_width = 400
 	src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real1.MOV"
 	video_capturer = Capturer(src).start()
-	board_processor = Processor(img_width = img_width)
+	board_processor = Processor(img_width = img_width, verbose = False, extra = False)
 	pyboard = chess.Board()
 	board_ini = -1
 
-
+	inter = cv2.INTER_LINEAR
 	time.sleep(1.0)
 	image_ini = video_capturer.read()
 	ar = img_width/image_ini.shape[1]
-	image_ini = imutils.resize(image_ini,  width=img_width, height = image_ini.shape[0]*ar)
+	image_ini = cv2.resize(image_ini,  (img_width, int(image_ini.shape[0]*ar)), interpolation=inter)
 	hist_image_ini =  cv2.calcHist([image_ini],[0],None,[256],[0,256])
 	board_ini = board_processor.get_board_array(image_ini)
 	image_list = [image_ini]
@@ -74,14 +74,18 @@ def mainCapture():
 		image_next = video_capturer.read()
 
 		
-		image_next = imutils.resize(image_next,  width=img_width, height = image_next.shape[0]*ar)
+		image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
 		new_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next)
 		#print(new_score*100)
 		if switch: #subida
+			#print(str(1)+ "----->" + str(new_score*100)) 
 			if abs(new_score*100 - old_score*100) > 2.5:
 				switch = not switch
+				#print(str(2)+ "----->" + str(new_score*100)) 
 		else:
+			#print(str(3)+ "----->" + str(new_score*100)) 
 			if abs(new_score*100 - old_score*100) < 0.5: #cuanto mas bajo mas similares deben ser las imagenes
+				#print(str(4)+ "----->" + str(new_score*100)) 
 				image_list.append(image_next)
 				if(board_ini == -1):
 					board_ini = board_processor.get_board_array(image_ini)
@@ -95,12 +99,12 @@ def mainCapture():
 				pyboard.push(crrnt_move)
 				print(pyboard)
 				print("<<==============================================================>>")
-
+				time.sleep(1.0)
 
 				image_ini = image_next
 				board_ini = board_next
 				image_next = video_capturer.read()
-				image_next = imutils.resize(image_next,  width=img_width, height = image_next.shape[0]*ar)
+				image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar) ), interpolation=inter)
 				hist_image_ini = hist_image_next
 				old_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next)
 				switch = not switch
@@ -109,8 +113,9 @@ def mainCapture():
 
 	end = time.time()
 	print("Recogidas y procesadas " + str(len(image_list)) + " imagenes.")
+	print("Se ha tardado :" + str(end - start) + "seg")
 
 if __name__ == "__main__":
-	mainCapture()
+	main()
 
 
