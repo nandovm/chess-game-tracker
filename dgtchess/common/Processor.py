@@ -21,8 +21,8 @@ class Processor:
 		self.max_thresh = 255
 		self.min_thresh_otsu = 0
 		self.min_thresh_binary = 127
-		self.thres_occ = 0.2
-		self.sqbor_ratio = 0.1
+		self.thres_occ = 0.06
+		self.sqbor_ratio = 0
 		self.sq_offset = 0 #centrado de casilla
 		self.x_crop = -1
 		self.do_transform = False
@@ -30,8 +30,8 @@ class Processor:
 
 	def get_whitepiecies_mask(self, image):
 		hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-		ly = np.array([10,180,160])
-		uy = np.array([30,255,255])
+		ly = np.array([5,170,137])
+		uy = np.array([35,255,255])
 		yellow = cv2.inRange(hsv,ly, uy);
 		res = cv2.bitwise_and(image, image, mask = yellow)
 		res = cv2.cvtColor(res, cv2.COLOR_HSV2BGR)
@@ -92,7 +92,7 @@ class Processor:
 			cv2.waitKey(0)
 		
 	
-		cnt = contours[0] #biggest contour0
+		cnt = contours[4] #biggest contour0
 		self.x,self.y,self.w,self.h = cv2.boundingRect(cnt)
 		self.x_crop = self.x
 	
@@ -148,7 +148,7 @@ class Processor:
 	
 	def get_n_draw_corners(self, image):
 		ngray = np.float32(image.copy())
-		dst = cv2.cornerHarris(ngray,2,3,0.04)
+		dst = cv2.cornerHarris(ngray,4,3,0.04)
 		
 		#result is dilated for marking the corners, not important
 		dst = cv2.dilate(dst,None)
@@ -167,10 +167,10 @@ class Processor:
 		#res = np.hstack((centroids,corners)) 
 		#res = np.int0(res) 
 	
-		x_min = min(corners, key = lambda t: t[0])[0]
-		x_max = max(corners, key = lambda t: t[0])[0]
-		y_min = min(corners, key = lambda t: t[1])[1]
-		y_max = max(corners, key = lambda t: t[1])[1]
+		x_min = int(min(corners, key = lambda t: t[0])[0])
+		x_max = int(max(corners, key = lambda t: t[0])[0])
+		y_min = int(min(corners, key = lambda t: t[1])[1])
+		y_max = int(max(corners, key = lambda t: t[1])[1])
 		
 		
 		key_corners = ((x_min, y_min),(x_max, y_min), (x_min, y_max), (x_max, y_max))
@@ -183,8 +183,9 @@ class Processor:
 				cv2.line(cornered, (x1, y1), (x2, y2), (255, 0, 0),4)
 		
 		
-	
-		return cornered
+
+		
+		return key_corners
 	
 	
 	def get_board_array(self, image):
@@ -201,13 +202,22 @@ class Processor:
 		image = cv2.GaussianBlur(image, (3, 3), 0)
 		"""
 		gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+		unm_gray = gray.copy()
+
+		key_corners = self.get_n_draw_corners(unm_gray.copy())
 		
-		if self.x_crop == -1:
-			self.get_crop_points(gray.copy())
+		#if self.verbose :
+		#	cv2.imshow('Harris',cornered)
+		#	cv2.waitKey(0)
+
+		#if self.x_crop == -1:
+		#	self.get_crop_points(gray.copy())
 		
-		image = image[self.y:self.y+self.h, self.x:self.x+self.w]
-		gray = gray[self.y:self.y+self.h, self.x:self.x+self.w]
-	
+		#image = image[self.y:self.y+self.h, self.x:self.x+self.w]
+		#gray = gray[self.y:self.y+self.h, self.x:self.x+self.w]
+		image = image[key_corners[1][1]:key_corners[2][1], key_corners[0][0]:key_corners[1][0]]
+		gray = gray[key_corners[1][1]:key_corners[2][1], key_corners[0][0]:key_corners[1][0]]
+
 		if self.verbose and self.verbose_extra:
 			cv2.imshow('Borderless Image', image)
 			cv2.waitKey(0)
@@ -236,21 +246,19 @@ class Processor:
 		#	cv2.imshow('Cannied', edged)
 		#	cv2.waitKey(0)
 		
-		#cornered = self.get_n_draw_corners(cropped.copy())
-		#
-		#if self.verbose :
-		#	cv2.imshow('Harris',cornered)
-		#	cv2.waitKey(0)
+
 		
 		white = self.get_whitepiecies_mask(image = image.copy())
 
-		if self.verbose and self.verbose_extra :
+		if self.verbose:
 			cv2.imshow('whiteMask', white)
 			cv2.waitKey(0)
 
 		black = self.get_blackpiecies_mask(image = image.copy())
 
-
+		if self.verbose:
+			cv2.imshow('blackMask', black)
+			cv2.waitKey(0)
 	
 		lined, square_list = self.get_n_draw_squares(image.copy(), square_width, square_height)
 	
@@ -277,7 +285,7 @@ class Processor:
 					print("Square " + str(index) + ": " + str(occupied_pixs))
 					if self.verbose_extra:
 						cv2.imshow(str(index), white_crop)
-						cv2.imshow("", edged)
+						#cv2.imshow("", edged)
 						cv2.waitKey(0)
 						cv2.destroyAllWindows()
 				
@@ -285,5 +293,5 @@ class Processor:
 					rep.append(1)
 				else:
 					rep.append(0)
-	
+		cv2.destroyAllWindows()
 		return rep
