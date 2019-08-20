@@ -32,7 +32,7 @@ def show_svg(file):
 
 def get_ssmi( histimageA, imageB):
 	hist2 = cv2.calcHist([imageB],[0],None,[256],[0,256])
-	score = cv2.compareHist(histimageA, hist2,cv2.HISTCMP_CORREL)
+	score = cv2.compareHist(histimageA, hist2,cv2.HISTCMP_BHATTACHARYYA)
 	return score, hist2
 
 def get_chessmove(board_ini, board_next):
@@ -60,9 +60,9 @@ def main():
 	print("START")
 	start = time.time()
 	switch = True
-	old_score = 0.999999
+	old_score = 0.02
 	img_width = 400
-	src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
+	src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
 	video_capturer = Capturer(src).start()
 	board_processor = Processor(img_width = img_width, verbose = True, extra = False)
 	pyboard = chess.Board()
@@ -95,21 +95,21 @@ def main():
 		#cv2.waitKey(0)
 		#cv2.destroyAllWindows()
  
-		print(new_score*100)
+		print(new_score*10)
 		if switch: #subida
 			#print(str(1)+ "----->" + str(new_score*100)) 
-			if abs(new_score*100 - old_score*100) > 1.3:
+			if new_score*10 > 0.5:
 				switch = not switch
 				#print(str(2)+ "----->" + str(new_score*100)) 
 		elif not switch:
 			#print(str(3)+ "----->" + str(new_score*100)) 
-			if abs(new_score*100 - old_score*100) < 0.4 : #cuanto mas bajo mas similares deben ser las imagenes
-				print( "----->" + str(new_score*100 - old_score*100) +  "<-----") 
+			if abs(new_score*10 - old_score*10) < 0.15 : #cuanto mas bajo mas similares deben ser las imagenes
+				print( "----->" + str(new_score*10 - old_score*10) +  "<-----") 
 				#cv2.imshow("Inicial", image_ini)
 				#cv2.imshow(str(new_score*100), image_next)
 				#cv2.waitKey(0)
 				#cv2.destroyAllWindows()
-				for i in range(0, 10):
+				for i in range(0, 50):
 					image_next = video_capturer.read()
 					image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
 
@@ -128,6 +128,9 @@ def main():
 				print("<<==============================================================>>")
 				crrnt_move = chess.Move.from_uci(move)
 				pyboard.push(crrnt_move)
+				if(move == "0000"):
+					pyboard.push(crrnt_move)
+
 				#show_svg(chess.svg.board(pyboard))
 				print(pyboard)
 				print("<<==============================================================>>")
@@ -147,8 +150,7 @@ def main():
 				image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
 
 				old_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
-				old_score = 0.999999
-				print(str(old_score) + "aki eeee")
+				old_score = 0.02
 
 				time.sleep(1.0)
 				cooldown = True

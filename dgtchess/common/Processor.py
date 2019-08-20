@@ -299,7 +299,7 @@ class Processor:
 				#occupied_pixs_black = self.check_occupancy(black_crop)
 				
 				#para eliminar incertidumbre
-				if abs(float(occupied_pixs_black_white) - self.thres_occ) < 0.25:
+				if(abs(float(occupied_pixs_black_white) - self.thres_occ) < 0.25):
 					edged_crop = edged[ square_list[index][1]+self.sq_edged_offset:square_list[index][1]+square_height-self.sq_edged_offset, square_list[index][0]+self.sq_edged_offset:square_list[index][0]+square_width-self.sq_edged_offset ]
 					occupied_pixs_edged = self.check_occupancy(edged_crop)
 					if self.verbose: print( "Valor Consultado!!!!" + occupied_pixs_black_white + " --------------> " + occupied_pixs_edged)
