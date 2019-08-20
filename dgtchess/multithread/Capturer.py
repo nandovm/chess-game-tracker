@@ -1,8 +1,8 @@
 from threading import Thread
-from skimage.measure import compare_ssim
 import imutils
 import cv2
 import sys
+import time
 # import the Queue class from Python 3
 if sys.version_info >= (3, 0):
 	from queue import Queue
@@ -20,38 +20,67 @@ class Capturer:
 		self.stopped = False
 
 		self.Q = Queue(maxsize=200)
+		self.t = Thread(target=self.get, args=())
+		self.t.daemon = True
 
 	def start(self):
-		t = Thread(target=self.get, args=())
-		t.daemon = True
-		t.start()
+
+		self.t.start()
 		return self
+
+	def running(self):
+		return self.more() or not self.stopped
 
 	def get(self):
 
-	# keep looping infinitely
+		# keep looping infinitely
 		while True:
 			# if the thread indicator variable is set, stop the
 			# thread
 			if self.stopped:
-				return
+				break
+
 			# otherwise, ensure the queue has room in it
 			if not self.Q.full():
 				# read the next frame from the file
 				(grabbed, frame) = self.stream.read()
+
 				# if the `grabbed` boolean is `False`, then we have
 				# reached the end of the video file
 				if not grabbed:
-					self.stop()
-					return
+					self.stopped = True
+					
+				# if there are transforms to be done, might as well
+				# do them on producer thread before handing back to
+				# consumer thread. ie. Usually the producer is so far
+				# ahead of consumer that we have time to spare.
+				#
+				# Python is not parallel but the transform operations
+				# are usually OpenCV native so release the GIL.
+				#
+				# Really just trying to avoid spinning up additional
+				# native threads and overheads of additional
+				# producer/consumer queues since this one was generally
+				# idle grabbing frames.
+
 				# add the frame to the queue
 				self.Q.put(frame)
+			else:
+				time.sleep(0.1)  # Rest for 10ms, we have a full queue
+
+		self.stream.release()
 
 	def stop(self):
 		self.stopped = True
+		self.t.join()
 
 	def more(self):
-		# return True if there are still frames in the queue
+		# return True if there are still frames in the queue. If stream is not stopped, try to wait a moment
+		tries = 0
+		while self.Q.qsize() == 0 and not self.stopped and tries < 5:
+			time.sleep(0.1)
+			tries += 1
+
 		return self.Q.qsize() > 0
 
 	def read(self):

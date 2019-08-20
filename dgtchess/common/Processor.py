@@ -7,8 +7,6 @@ import itertools as itl
 
 
 from matplotlib import pyplot as plt
-from pylsd.lsd import lsd
-
 
 class Processor: 
 	def __init__(self, img_width, verbose, extra):
@@ -16,14 +14,16 @@ class Processor:
 		self.verbose = verbose
 		self.verbose_extra = extra
 		self.canny_ratio = 0.33  
-
+		self.key_corners = 0
 		self.img_width = img_width
 		self.max_thresh = 255
 		self.min_thresh_otsu = 0
 		self.min_thresh_binary = 127
-		self.thres_occ = 0.06
+		self.thres_occ = 0.06 
+		self.thres_edged_occ = 9.4
 		self.sqbor_ratio = 0
-		self.sq_offset = 0 #centrado de casilla
+		self.sq_offset = 5  #centrado de casilla
+		self.sq_edged_offset = 12 #centrado de casilla
 		self.x_crop = -1
 		self.do_transform = False
 
@@ -36,6 +36,7 @@ class Processor:
 		res = cv2.bitwise_and(image, image, mask = yellow)
 		res = cv2.cvtColor(res, cv2.COLOR_HSV2BGR)
 		res = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+		_, res = cv2.threshold(res, 60, self.max_thresh, cv2.THRESH_BINARY)
 		return res
 
 	def get_blackpiecies_mask(self, image):
@@ -47,6 +48,7 @@ class Processor:
 		res = cv2.bitwise_and(image, image, mask = black)
 		res = cv2.cvtColor(res, cv2.COLOR_HSV2BGR)
 		res = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+		_, res = cv2.threshold(res, 20, self.max_thresh, cv2.THRESH_BINARY)
 		return res
 
 	def get_n_draw_squares(self, lined, square_width, square_height):
@@ -142,7 +144,7 @@ class Processor:
 		#blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 	
 		#blurred = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
-		#blurred = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
+		#blurred = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
 	
 		return gray
 	
@@ -187,6 +189,26 @@ class Processor:
 		
 		return key_corners
 	
+	def get_square_str(slef, index):
+
+		coc = index / 8
+		res = index % 8
+		coc = int(coc)
+
+
+		squares = {
+			0: "a",
+			1: "b",
+			2: "c",
+			3: "d",
+			4: "e",
+			5: "f",
+			6: "g",
+			7: "h"
+		}
+		letter = squares.get(coc)
+
+		return str(letter + str(8 - res ))
 	
 	def get_board_array(self, image):
 	
@@ -204,7 +226,7 @@ class Processor:
 		gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 		unm_gray = gray.copy()
 
-		key_corners = self.get_n_draw_corners(unm_gray.copy())
+		if self.key_corners == 0: self.key_corners = self.get_n_draw_corners(unm_gray.copy())
 		
 		#if self.verbose :
 		#	cv2.imshow('Harris',cornered)
@@ -215,49 +237,47 @@ class Processor:
 		
 		#image = image[self.y:self.y+self.h, self.x:self.x+self.w]
 		#gray = gray[self.y:self.y+self.h, self.x:self.x+self.w]
-		image = image[key_corners[1][1]:key_corners[2][1], key_corners[0][0]:key_corners[1][0]]
-		gray = gray[key_corners[1][1]:key_corners[2][1], key_corners[0][0]:key_corners[1][0]]
+		image = image[self.key_corners[1][1]:self.key_corners[2][1], self.key_corners[0][0]:self.key_corners[1][0]]
+		gray = gray[self.key_corners[1][1]:self.key_corners[2][1], self.key_corners[0][0]:self.key_corners[1][0]]
 
-		if self.verbose and self.verbose_extra:
+		if self.verbose :
 			cv2.imshow('Borderless Image', image)
 			cv2.waitKey(0)
 	
 		
-		image, cropped = self.crop_board_border(image.copy(), gray.copy())
+		#image, cropped = self.crop_board_border(image.copy(), gray.copy())
 	
-		if self.verbose and self.verbose_extra:
-			cv2.imshow('Borderless Board', cropped)
-			cv2.waitKey(0)
+		#if self.verbose:
+		#	cv2.imshow('Borderless Board', cropped)
+		#	cv2.waitKey(0)
 	
 
-		trans  = self.get_histo_n_transf(gray = cropped.copy(), apply = self.do_transform)
+		trans  = self.get_histo_n_transf(gray = gray.copy(), apply = self.do_transform)
 		square_width = int(image.shape[1]/8)
 		square_height = int(image.shape[0]/8)	
 	
 		threshold, _ = cv2.threshold(trans, self.min_thresh_otsu, self.max_thresh, cv2.THRESH_OTSU)
 	
-		#edged = cv2.Canny(trans, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
+		edged = cv2.Canny(trans, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
 	
 		if self.verbose and self.do_transform:
 			cv2.imshow('Histogramed and Transformed', trans)
 			cv2.waitKey(0)
 	
-		#if self.verbose :
-		#	cv2.imshow('Cannied', edged)
-		#	cv2.waitKey(0)
+		if self.verbose :
+			cv2.imshow('Cannied', edged)
+			cv2.waitKey(0)
 		
 
 		
 		white = self.get_whitepiecies_mask(image = image.copy())
 
-		if self.verbose:
-			cv2.imshow('whiteMask', white)
-			cv2.waitKey(0)
-
 		black = self.get_blackpiecies_mask(image = image.copy())
 
+		black_n_white = cv2.add(black, white)
+
 		if self.verbose:
-			cv2.imshow('blackMask', black)
+			cv2.imshow('piecesMask', black_n_white)
 			cv2.waitKey(0)
 	
 		lined, square_list = self.get_n_draw_squares(image.copy(), square_width, square_height)
@@ -273,23 +293,33 @@ class Processor:
 			for y in range(0, 8):
 	
 				index = y+x*8
-				black_crop = black[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
-				white_crop = white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+				black_n_white_crop = black_n_white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+				#white_crop = white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+				occupied_pixs_black_white = self.check_occupancy(black_n_white_crop)
+				#occupied_pixs_black = self.check_occupancy(black_crop)
+				
+				#para eliminar incertidumbre
+				if abs(float(occupied_pixs_black_white) - self.thres_occ) < 0.25:
+					edged_crop = edged[ square_list[index][1]+self.sq_edged_offset:square_list[index][1]+square_height-self.sq_edged_offset, square_list[index][0]+self.sq_edged_offset:square_list[index][0]+square_width-self.sq_edged_offset ]
+					occupied_pixs_edged = self.check_occupancy(edged_crop)
+					if self.verbose: print( "Valor Consultado!!!!" + occupied_pixs_black_white + " --------------> " + occupied_pixs_edged)
+					if float(occupied_pixs_edged) > self.thres_edged_occ:
+						occupied_pixs_black_white = str(float(occupied_pixs_black_white) + float(occupied_pixs_edged))
+					else:
+						occupied_pixs_black_white = str(0)
 
-				occupied_pixs_white = self.check_occupancy(white_crop)
-				occupied_pixs_black = self.check_occupancy(black_crop)
-
-				occupied_pixs = max(occupied_pixs_white, occupied_pixs_black)
-	
 				if self.verbose:
-					print("Square " + str(index) + ": " + str(occupied_pixs))
+					if(float(occupied_pixs_black_white) > self.thres_occ):
+						print("Square " + self.get_square_str(index) + ": " + "OCUPADO ------------------->" + occupied_pixs_black_white)
+					else:
+						print("Square " + self.get_square_str(index) + ": " + "NO --------------->" + occupied_pixs_black_white)
 					if self.verbose_extra:
 						cv2.imshow(str(index), white_crop)
 						#cv2.imshow("", edged)
 						cv2.waitKey(0)
 						cv2.destroyAllWindows()
 				
-				if float(occupied_pixs) > self.thres_occ:
+				if float(occupied_pixs_black_white) > self.thres_occ:
 					rep.append(1)
 				else:
 					rep.append(0)
