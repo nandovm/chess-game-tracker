@@ -22,7 +22,7 @@ class Processor:
 		self.thres_occ = 0.06 
 		self.thres_edged_occ = 9.4
 		self.sqbor_ratio = 0
-		self.sq_offset = 5  #centrado de casilla
+		self.sq_offset = 0  #centrado de casilla
 		self.sq_edged_offset = 12 #centrado de casilla
 		self.x_crop = -1
 		self.do_transform = False
@@ -210,7 +210,7 @@ class Processor:
 
 		return str(letter + str(8 - res ))
 	
-	def get_board_array(self, image):
+	def get_board_array(self, image, turn):
 	
 	
 		if self.verbose :
@@ -253,8 +253,8 @@ class Processor:
 	
 
 		trans  = self.get_histo_n_transf(gray = gray.copy(), apply = self.do_transform)
-		square_width = int(image.shape[1]/8)
-		square_height = int(image.shape[0]/8)	
+		square_width = int(image.shape[1]/8) + 5
+		square_height = int(image.shape[0]/8) + 5
 	
 		threshold, _ = cv2.threshold(trans, self.min_thresh_otsu, self.max_thresh, cv2.THRESH_OTSU)
 	
@@ -293,20 +293,29 @@ class Processor:
 			for y in range(0, 8):
 	
 				index = y+x*8
-				black_n_white_crop = black_n_white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
-				#white_crop = white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
-				occupied_pixs_black_white = self.check_occupancy(black_n_white_crop)
-				#occupied_pixs_black = self.check_occupancy(black_crop)
+
+
+				if turn :
+					black_crop = black[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+					occupied_pixs_black = self.check_occupancy(black_crop)
+					occupied_pixs_black_white = occupied_pixs_black
+				else:
+					white_crop = white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+					occupied_pixs_white = self.check_occupancy(white_crop)
+					occupied_pixs_black_white = occupied_pixs_white
+				#black_n_white_crop = black_n_white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+				#occupied_pixs_black_white = self.check_occupancy(black_n_white_crop)
+
 				
 				#para eliminar incertidumbre
-				if(abs(float(occupied_pixs_black_white) - self.thres_occ) < 0.25):
-					edged_crop = edged[ square_list[index][1]+self.sq_edged_offset:square_list[index][1]+square_height-self.sq_edged_offset, square_list[index][0]+self.sq_edged_offset:square_list[index][0]+square_width-self.sq_edged_offset ]
-					occupied_pixs_edged = self.check_occupancy(edged_crop)
-					if self.verbose: print( "Valor Consultado!!!!" + occupied_pixs_black_white + " --------------> " + occupied_pixs_edged)
-					if float(occupied_pixs_edged) > self.thres_edged_occ:
-						occupied_pixs_black_white = str(float(occupied_pixs_black_white) + float(occupied_pixs_edged))
-					else:
-						occupied_pixs_black_white = str(0)
+				#if (float(occupied_pixs_black_white) > 0 and float(occupied_pixs_black_white) < self.thres_occ + 0.04) and (abs(float(occupied_pixs_black_white) - self.thres_occ) < 0.25):
+				#	edged_crop = edged[ square_list[index][1]+self.sq_edged_offset:square_list[index][1]+square_height-self.sq_edged_offset, square_list[index][0]+self.sq_edged_offset:square_list[index][0]+square_width-self.sq_edged_offset ]
+				#	occupied_pixs_edged = self.check_occupancy(edged_crop)
+				#	if self.verbose: print( "Valor Consultado!!!!" + occupied_pixs_black_white + " --------------> " + occupied_pixs_edged)
+				#	if float(occupied_pixs_edged) > self.thres_edged_occ:
+				#		occupied_pixs_black_white = str(float(occupied_pixs_black_white) + float(occupied_pixs_edged))
+				#	else:
+				#		occupied_pixs_black_white = str(0)
 
 				if self.verbose:
 					if(float(occupied_pixs_black_white) > self.thres_occ):
@@ -314,7 +323,10 @@ class Processor:
 					else:
 						print("Square " + self.get_square_str(index) + ": " + "NO --------------->" + occupied_pixs_black_white)
 					if self.verbose_extra:
-						cv2.imshow(str(index), white_crop)
+						if turn:
+							cv2.imshow(str(index), black_crop)
+						else:
+							cv2.imshow(str(index), white_crop)	
 						#cv2.imshow("", edged)
 						cv2.waitKey(0)
 						cv2.destroyAllWindows()

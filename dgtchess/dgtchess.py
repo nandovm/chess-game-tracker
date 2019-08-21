@@ -64,9 +64,11 @@ def main():
 	img_width = 400
 	src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
 	video_capturer = Capturer(src).start()
-	board_processor = Processor(img_width = img_width, verbose = True, extra = False)
+	board_processor = Processor(img_width = img_width, verbose = True, extra = True)
 	pyboard = chess.Board()
 	board_ini = -1
+
+	sw_turn = False
 
 	inter = cv2.INTER_AREA
 	time.sleep(1.0)
@@ -79,7 +81,7 @@ def main():
 	image_ini_hsv = cv2.cvtColor(image_ini, cv2.COLOR_BGR2HSV)
 	hist_image_ini =  cv2.calcHist([image_ini_hsv],[0],None,[256],[0,256])
 
-	board_ini = board_processor.get_board_array(image_ini)
+	board_ini = board_processor.get_board_array(image_ini, sw_turn)
 	image_list = [image_ini]
 	i = 0
 	cooldown = False
@@ -115,8 +117,8 @@ def main():
 
 				image_list.append(image_next)
 				if(board_ini == -1):                                                                                                 
-					board_ini = board_processor.get_board_array(image_ini)
-				board_next = board_processor.get_board_array(image_next)
+					board_ini = board_processor.get_board_array(image_ini, sw_turn)
+				board_next = board_processor.get_board_array(image_next, sw_turn)
 				#print(board_ini)
 				#print(board_next)
 
@@ -128,8 +130,11 @@ def main():
 				print("<<==============================================================>>")
 				crrnt_move = chess.Move.from_uci(move)
 				pyboard.push(crrnt_move)
+				sw_turn = not sw_turn
+
 				if(move == "0000"):
 					pyboard.push(crrnt_move)
+					sw_turn = not sw_turn
 
 				#show_svg(chess.svg.board(pyboard))
 				print(pyboard)
