@@ -19,7 +19,7 @@ class Processor:
 		self.max_thresh = 255
 		self.min_thresh_otsu = 0
 		self.min_thresh_binary = 127
-		self.thres_occ = 0.06 
+		self.thres_occ = 2 
 		self.thres_edged_occ = 9.4
 		self.sqbor_ratio = 0
 		self.sq_offset = 0  #centrado de casilla
@@ -30,7 +30,7 @@ class Processor:
 
 	def get_whitepiecies_mask(self, image):
 		hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-		ly = np.array([5,170,137])
+		ly = np.array([5,158,125])
 		uy = np.array([35,255,255])
 		yellow = cv2.inRange(hsv,ly, uy);
 		res = cv2.bitwise_and(image, image, mask = yellow)
@@ -43,7 +43,7 @@ class Processor:
 
 		hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 		lb = np.array([0,0,0])
-		ub = np.array([180,255,25])
+		ub = np.array([180,106,60])
 		black = cv2.inRange(hsv,lb, ub);
 		res = cv2.bitwise_and(image, image, mask = black)
 		res = cv2.cvtColor(res, cv2.COLOR_HSV2BGR)
@@ -253,8 +253,8 @@ class Processor:
 	
 
 		trans  = self.get_histo_n_transf(gray = gray.copy(), apply = self.do_transform)
-		square_width = int(image.shape[1]/8) + 5
-		square_height = int(image.shape[0]/8) + 5
+		square_width = int(image.shape[1]/8)
+		square_height = int(image.shape[0]/8)	
 	
 		threshold, _ = cv2.threshold(trans, self.min_thresh_otsu, self.max_thresh, cv2.THRESH_OTSU)
 	
@@ -277,8 +277,13 @@ class Processor:
 		black_n_white = cv2.add(black, white)
 
 		if self.verbose:
-			cv2.imshow('piecesMask', black_n_white)
+			cv2.imshow('piecesMask', white)
 			cv2.waitKey(0)
+
+		if self.verbose:
+			cv2.imshow('piecesMask', black)
+			cv2.waitKey(0)
+	
 	
 		lined, square_list = self.get_n_draw_squares(image.copy(), square_width, square_height)
 	
@@ -287,7 +292,8 @@ class Processor:
 			cv2.waitKey(0)
 			cv2.destroyAllWindows()
 		
-		rep = [];
+		rep_w = [];
+		rep_b = [];
 		
 		for x in range(0, 8):
 			for y in range(0, 8):
@@ -295,14 +301,12 @@ class Processor:
 				index = y+x*8
 
 
-				if turn :
-					black_crop = black[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
-					occupied_pixs_black = self.check_occupancy(black_crop)
-					occupied_pixs_black_white = occupied_pixs_black
-				else:
-					white_crop = white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
-					occupied_pixs_white = self.check_occupancy(white_crop)
-					occupied_pixs_black_white = occupied_pixs_white
+				black_crop = black[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+				occupied_pixs_black = self.check_occupancy(black_crop)
+				occupied_pixs_black_white = occupied_pixs_black
+				white_crop = white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
+				occupied_pixs_white = self.check_occupancy(white_crop)
+				occupied_pixs_black_white = occupied_pixs_white
 				#black_n_white_crop = black_n_white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
 				#occupied_pixs_black_white = self.check_occupancy(black_n_white_crop)
 
@@ -317,23 +321,32 @@ class Processor:
 				#	else:
 				#		occupied_pixs_black_white = str(0)
 
-				if self.verbose:
-					if(float(occupied_pixs_black_white) > self.thres_occ):
-						print("Square " + self.get_square_str(index) + ": " + "OCUPADO ------------------->" + occupied_pixs_black_white)
-					else:
-						print("Square " + self.get_square_str(index) + ": " + "NO --------------->" + occupied_pixs_black_white)
-					if self.verbose_extra:
-						if turn:
-							cv2.imshow(str(index), black_crop)
-						else:
-							cv2.imshow(str(index), white_crop)	
-						#cv2.imshow("", edged)
-						cv2.waitKey(0)
-						cv2.destroyAllWindows()
-				
-				if float(occupied_pixs_black_white) > self.thres_occ:
-					rep.append(1)
+				if float(occupied_pixs_black) > 1.2:
+					rep_b.append(1)
+					if self.verbose: print("Square " + self.get_square_str(index) + " NEGRO : " + "OCUPADO ------------------->" + occupied_pixs_black)
 				else:
-					rep.append(0)
+					rep_b.append(0)
+					if self.verbose: print("Square " + self.get_square_str(index) + " NEGRO : " + "NO --------------->" + occupied_pixs_black)
+				if float(occupied_pixs_white) > 2.2:
+					rep_w.append(1)
+					if self.verbose: print("Square " + self.get_square_str(index) + " BLANCO : " + "OCUPADO ------------------->" + occupied_pixs_white)
+				else:
+					rep_w.append(0)
+					if self.verbose: print("Square " + self.get_square_str(index) + " BLANCO : " + "NO --------------->" + occupied_pixs_white)
+
+
+				if self.verbose and self.verbose_extra:
+					if turn:
+						cv2.imshow(str(index), black_crop)
+					else:
+						cv2.imshow(str(index), white_crop)	
+					#cv2.imshow("", edged)
+					cv2.waitKey(0)
+					cv2.destroyAllWindows()
+
+
 		cv2.destroyAllWindows()
-		return rep
+		if turn: 
+			return rep_b, rep_w
+		else:
+			return rep_w, rep_b
