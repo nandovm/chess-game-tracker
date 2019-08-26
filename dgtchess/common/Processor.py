@@ -42,17 +42,18 @@ class Processor:
 	def get_blackpiecies_mask(self, image):
 
 		hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-		lb = np.array([33,0,0])
-		ub = np.array([180,82,255])
+		lb = np.array([0,0,0])
+		ub = np.array([180,93,255])
 		black = cv2.inRange(hsv,lb, ub);
 		res1 = cv2.bitwise_and(image, image, mask = black)
 
-		lb = np.array([0,0,0])
-		ub = np.array([13,82,255])
-		black = cv2.inRange(hsv,lb, ub);
-		res2 = cv2.bitwise_and(image, image, mask = black)
-		res = cv2.add(res1, res2)
+		#lb = np.array([0,0,0])
+		#ub = np.array([13,82,255])
+		#black = cv2.inRange(hsv,lb, ub);
+		#res2 = cv2.bitwise_and(image, image, mask = black)
+		#res = cv2.add(res1, res2)
 
+		res = res1
 		res = cv2.cvtColor(res, cv2.COLOR_HSV2BGR)
 		res = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
 		_, res = cv2.threshold(res, 20, self.max_thresh, cv2.THRESH_BINARY)
@@ -247,7 +248,7 @@ class Processor:
 		image = image[self.key_corners[1][1]:self.key_corners[2][1], self.key_corners[0][0]:self.key_corners[1][0]]
 		gray = gray[self.key_corners[1][1]:self.key_corners[2][1], self.key_corners[0][0]:self.key_corners[1][0]]
 
-		image = cv2.fastNlMeansDenoisingColored(image,None,10,10,7,21)
+		#image = cv2.fastNlMeansDenoisingColored(image,None,10,10,7,21)
 
 
 		if self.verbose :
@@ -286,10 +287,10 @@ class Processor:
 
 		black_n_white = cv2.add(black, white)
 
-		black = cv2.Canny(black, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
+		#black = cv2.Canny(black, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
 
 
-		white = cv2.Canny(white, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
+		#white = cv2.Canny(white, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
 
 		kernel = np.ones((3,3),np.uint8)
 		white = cv2.dilate(white,kernel,iterations = 1)
@@ -341,13 +342,13 @@ class Processor:
 				#	else:
 				#		occupied_pixs_black_white = str(0)
 
-				if float(occupied_pixs_black) > 1:
+				if float(occupied_pixs_black) > 1.8:
 					rep_b.append(1)
 					if self.verbose: print("Square " + self.get_square_str(index) + " NEGRO : " + "OCUPADO ------------------->" + occupied_pixs_black)
 				else:
 					rep_b.append(0)
 					if self.verbose: print("Square " + self.get_square_str(index) + " NEGRO : " + "NO --------------->" + occupied_pixs_black)
-				if float(occupied_pixs_white) > 1.18:
+				if float(occupied_pixs_white) > 0.98:
 					rep_w.append(1)
 					if self.verbose: print("Square " + self.get_square_str(index) + " BLANCO : " + "OCUPADO ------------------->" + occupied_pixs_white)
 				else:

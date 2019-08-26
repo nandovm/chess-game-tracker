@@ -4,10 +4,14 @@ from IPython.display import SVG, display
 
 from operator import sub
 from common.Processor import Processor
+
 from multithread.Capturer import Capturer
 
+import matplotlib.pyplot as plt
 import random as rng
 import numpy as np
+import imutils
+import math
 
 #import PythonMagick
 import argparse
@@ -61,13 +65,13 @@ def get_chessmove(board_ini, board_next):
 
 
 def main():
-	
 	print("START")
 	start = time.time()
 	switch = True
 	old_score = 0.02
 	img_width = 400
-	src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
+	#src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
+	src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
 	video_capturer = Capturer(src).start()
 	board_processor = Processor(img_width = img_width, verbose = True, extra = False)
 	pyboard = chess.Board()
@@ -186,8 +190,115 @@ def main():
 def nothing(x):
 	pass
 
+def prueba2():
+	print("START")
+	start = time.time()
+	switch = True
+	old_score = 0.025
+	img_width = 400
+	#src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
+	src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
+	video_capturer = Capturer(src).start()
+	board_processor = Processor(img_width = img_width, verbose = True, extra = False)
+	pyboard = chess.Board()
+	board_ini = -1
+
+	sw_turn = False
+
+	inter = cv2.INTER_AREA
+	time.sleep(1.0)
+	image_ini = video_capturer.read()
+	ar = img_width/image_ini.shape[1]
+
+
+	image_ini = cv2.resize(image_ini,  (img_width, int(image_ini.shape[0]*ar)), interpolation=inter)
+
+	image_ini_hsv = cv2.cvtColor(image_ini, cv2.COLOR_BGR2HSV)
+	hist_image_ini =  cv2.calcHist([image_ini_hsv],[0],None,[256],[0,256])
+
+	#board_ini, _ = board_processor.get_board_array(image_ini, sw_turn)
+	image_list = [image_ini]
+	count = 0
+	cooldown = False
+	cont = 1
+	value = 0
+	x=[]
+	y=[]
+
+	j=0
+	while(video_capturer.running() and video_capturer.more()):
+		image_next = video_capturer.read()
+		
+		if image_next is None: break
+
+		if cooldown: i+=1
+
+		
+		image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
+		image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
+		new_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
+ 
+		print(str(new_score*10) + "---------////" + str(value) + "---------////" + str(old_score*10))
+		value = abs(new_score*10 - old_score*10)
+		if switch: #subida
+			#print(str(1)+ "----->" + str(new_score*100)) 
+			if value > 0.42:
+				switch = not switch
+		elif not switch:
+			#print(str(3)+ "----->" + str(new_score*100)) 
+			if new_score*10 < 0.5 and new_score*10 > 0.2 :
+				j+=1
+			if j==2: #cuanto mas bajo mas similares deben ser las imagenes
+				print( "================================>" + str(new_score*10 - old_score*10) +  "<================================") 
+
+				for i in range(0, 5):
+					image_next = video_capturer.read()
+					if i == 3:
+						image_ini = cv2.resize(image_next,  (img_width, int(image_ini.shape[0]*ar)), interpolation=inter)
+						image_ini_hsv = cv2.cvtColor(image_ini, cv2.COLOR_BGR2HSV)
+						hist_image_ini =  cv2.calcHist([image_ini_hsv],[0],None,[256],[0,256])
+					if i == 4:
+						image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
+						image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
+						new_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
+						#print( "================================>" + str(new_score*10)  + "<================================")
+
+				image_list.append(image_next)
+				cv2.imshow("image", image_next)
+				cv2.waitKey(0)
+				cv2.destroyAllWindows()
+
+
+				image_ini = image_next
+
+				hist_image_ini = hist_image_next
+				switch = not switch
+				old_score = 0.025
+				#old_score = 0.02
+
+				#time.sleep(1.0)
+				j = 0
+		cont += 1
+		x.append(cont)
+		y.append(value)
+
+
+
+
+		
+
+
+	end = time.time()
+	plt.plot(x, y)
+	plt.show()
+	print("Recogidas y procesadas " + str(len(image_list)) + " imagenes.")
+	print("Se ha tardado :" + str(end - start) + "seg")
+
 def prueba():
-	cap = cv2.VideoCapture("/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov")
+	#src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
+	src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
+
+	cap = cv2.VideoCapture(src)
 
 
 	# Creating a window for later use
@@ -197,11 +308,11 @@ def prueba():
 	h,s,v = 100,100,100
 	
 	# Creating track bar
-	cv2.createTrackbar('h', 'tracks',13,180,nothing)
-	cv2.createTrackbar('s', 'tracks',165,255,nothing)
-	cv2.createTrackbar('v', 'tracks',160,255,nothing)
+	cv2.createTrackbar('h', 'tracks',35,180,nothing)
+	cv2.createTrackbar('s', 'tracks',0,255,nothing)
+	cv2.createTrackbar('v', 'tracks',0,255,nothing)
 
-	cv2.createTrackbar('hmax', 'tracks',20,180,nothing)
+	cv2.createTrackbar('hmax', 'tracks',180,180,nothing)
 	cv2.createTrackbar('smax', 'tracks',255,255,nothing)
 	cv2.createTrackbar('vmax', 'tracks',255,255,nothing)
 	kernel = np.ones((5,5),np.uint8)
@@ -241,6 +352,6 @@ def prueba():
 
 
 if __name__ == "__main__":
-	main()
+	prueba2()
 
 
