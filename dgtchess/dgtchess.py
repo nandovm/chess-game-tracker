@@ -102,7 +102,7 @@ def main():
 		#cv2.waitKey(0)
 		#cv2.destroyAllWindows()
  
-		print(new_score*10)
+		#print(new_score*10)
 		if switch: #subida
 			#print(str(1)+ "----->" + str(new_score*100)) 
 			if new_score*10 > 0.5:
@@ -111,7 +111,7 @@ def main():
 		elif not switch:
 			#print(str(3)+ "----->" + str(new_score*100)) 
 			if abs(new_score*10 - old_score*10) < 0.15 : #cuanto mas bajo mas similares deben ser las imagenes
-				print( "----->" + str(new_score*10 - old_score*10) +  "<-----") 
+				print( "================================>" + str(new_score*10 - old_score*10) +  "<================================") 
 				#cv2.imshow("Inicial", image_ini)
 				#cv2.imshow(str(new_score*100), image_next)
 				#cv2.waitKey(0)
@@ -197,13 +197,13 @@ def prueba():
 	h,s,v = 100,100,100
 	
 	# Creating track bar
-	cv2.createTrackbar('h', 'tracks',0,180,nothing)
-	cv2.createTrackbar('s', 'tracks',0,255,nothing)
-	cv2.createTrackbar('v', 'tracks',0,255,nothing)
+	cv2.createTrackbar('h', 'tracks',13,180,nothing)
+	cv2.createTrackbar('s', 'tracks',165,255,nothing)
+	cv2.createTrackbar('v', 'tracks',160,255,nothing)
 
-	cv2.createTrackbar('hmax', 'tracks',180,180,nothing)
-	cv2.createTrackbar('smax', 'tracks',106,255,nothing)
-	cv2.createTrackbar('vmax', 'tracks',60,255,nothing)
+	cv2.createTrackbar('hmax', 'tracks',20,180,nothing)
+	cv2.createTrackbar('smax', 'tracks',255,255,nothing)
+	cv2.createTrackbar('vmax', 'tracks',255,255,nothing)
 	kernel = np.ones((5,5),np.uint8)
 	
 	while(1):
