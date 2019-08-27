@@ -65,13 +65,12 @@ def get_chessmove(board_ini, board_next):
 
 
 def main():
-	print("START")
 	start = time.time()
 	switch = True
-	old_score = 0.02
+	old_score = 0.025
 	img_width = 400
-	#src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
-	src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
+	src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
+	#src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
 	video_capturer = Capturer(src).start()
 	board_processor = Processor(img_width = img_width, verbose = True, extra = False)
 	pyboard = chess.Board()
@@ -93,12 +92,20 @@ def main():
 	board_ini, _ = board_processor.get_board_array(image_ini, sw_turn)
 	image_list = [image_ini]
 	i = 0
+	cont = 1
+	value = 0
 	cooldown = False
+	j = 0
+	x=[]
+	y=[]
+	print("START")
+
+
 	while(video_capturer.running()):
 		image_next = video_capturer.read()
-		if cooldown: i+=1
 
-		
+		if image_next is None: break
+
 		image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
 		image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
 		new_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
@@ -107,22 +114,38 @@ def main():
 		#cv2.destroyAllWindows()
  
 		#print(new_score*10)
+
+		value = abs(new_score*10 - old_score*10)
+		print(str(new_score*10) + "---------////" + str(value) + "---------////" + str(old_score*10))
+		
 		if switch: #subida
 			#print(str(1)+ "----->" + str(new_score*100)) 
-			if new_score*10 > 0.5:
+			if value > 0.42:
 				switch = not switch
 				#print(str(2)+ "----->" + str(new_score*100)) 
 		elif not switch:
 			#print(str(3)+ "----->" + str(new_score*100)) 
-			if abs(new_score*10 - old_score*10) < 0.15 : #cuanto mas bajo mas similares deben ser las imagenes
+			if new_score*10 < 0.5 and new_score*10 > 0.2 : #cuanto mas bajo mas similares deben ser las imagenes
+				j+=1
+			if j==2:
 				print( "================================>" + str(new_score*10 - old_score*10) +  "<================================") 
 				#cv2.imshow("Inicial", image_ini)
 				#cv2.imshow(str(new_score*100), image_next)
 				#cv2.waitKey(0)
 				#cv2.destroyAllWindows()
-				for i in range(0, 50):
+
+				for i in range(0, 5):
 					image_next = video_capturer.read()
-					image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
+					if i == 3:
+						image_ini = cv2.resize(image_next,  (img_width, int(image_ini.shape[0]*ar)), interpolation=inter)
+						image_ini_hsv = cv2.cvtColor(image_ini, cv2.COLOR_BGR2HSV)
+						hist_image_ini =  cv2.calcHist([image_ini_hsv],[0],None,[256],[0,256])
+					if i == 4:
+						image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
+						image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
+						new_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
+						#print( "================================>" + str(new_score*10)  + "<================================")
+
 
 				image_list.append(image_next)
 				if(board_ini == -1):                                                                                                 
@@ -164,25 +187,21 @@ def main():
 				hist_image_ini = hist_image_next
 				switch = not switch
 
-				image_next = video_capturer.read()
+				old_score = 0.025
 
+				time.sleep(2.0)
+				j = 0
+		cont +=1
+		x.append(cont)
+		y.append(value)
 		
-				image_next = cv2.resize(image_next,  (img_width, int(image_next.shape[0]*ar)), interpolation=inter)
-
-				image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
-
-				old_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
-				old_score = 0.02
-
-				time.sleep(1.0)
-				cooldown = True
-				i=0 
-
-		if i > 50: cooldown = not cooldown 
 		
 
-
+	print(pyboard.move_stack)
+	print(pyboard.board_fen())
 	end = time.time()
+	plt.plot(x, y)
+	plt.show()
 	print("Recogidas y procesadas " + str(len(image_list)) + " imagenes.")
 	print("Se ha tardado :" + str(end - start) + "seg")
 
@@ -191,13 +210,12 @@ def nothing(x):
 	pass
 
 def prueba2():
-	print("START")
 	start = time.time()
 	switch = True
 	old_score = 0.025
 	img_width = 400
-	#src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
-	src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
+	src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
+	#src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
 	video_capturer = Capturer(src).start()
 	board_processor = Processor(img_width = img_width, verbose = True, extra = False)
 	pyboard = chess.Board()
@@ -224,7 +242,7 @@ def prueba2():
 	value = 0
 	x=[]
 	y=[]
-
+	print("START")
 	j=0
 	while(video_capturer.running() and video_capturer.more()):
 		image_next = video_capturer.read()
@@ -238,7 +256,7 @@ def prueba2():
 		image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
 		new_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
  
-		print(str(new_score*10) + "---------////" + str(value) + "---------////" + str(old_score*10))
+		print(str(new_score*10) + "---------////" + str(new_score*10 - old_score*10) + "---------////" + str(old_score*10))
 		value = abs(new_score*10 - old_score*10)
 		if switch: #subida
 			#print(str(1)+ "----->" + str(new_score*100)) 
@@ -353,5 +371,6 @@ def prueba():
 
 if __name__ == "__main__":
 	prueba2()
+
 
 

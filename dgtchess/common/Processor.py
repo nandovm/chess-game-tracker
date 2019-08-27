@@ -221,7 +221,7 @@ class Processor:
 	def get_board_array(self, image, turn):
 	
 	
-		if self.verbose :
+		if self.verbose and self.verbose_extra:
 			cv2.imshow('Original Image', image)
 			cv2.waitKey(0)
 
@@ -251,7 +251,7 @@ class Processor:
 		#image = cv2.fastNlMeansDenoisingColored(image,None,10,10,7,21)
 
 
-		if self.verbose :
+		if self.verbose and self.verbose_extra:
 			cv2.imshow('Borderless Image', image)
 			cv2.waitKey(0)
 
@@ -275,7 +275,7 @@ class Processor:
 			cv2.imshow('Histogramed and Transformed', trans)
 			cv2.waitKey(0)
 	
-		if self.verbose :
+		if self.verbose and self.verbose_extra:
 			cv2.imshow('Cannied', edged)
 			cv2.waitKey(0)
 		
@@ -297,11 +297,11 @@ class Processor:
 		black = cv2.dilate(black,kernel,iterations = 1)
 
 
-		if self.verbose:
+		if self.verbose and self.verbose_extra:
 			cv2.imshow('piecesMask', white)
 			cv2.waitKey(0)
 
-		if self.verbose:
+		if self.verbose and self.verbose_extra :
 			cv2.imshow('piecesMask', black)
 			cv2.waitKey(0)
 	
@@ -342,13 +342,13 @@ class Processor:
 				#	else:
 				#		occupied_pixs_black_white = str(0)
 
-				if float(occupied_pixs_black) > 1.8:
+				if float(occupied_pixs_black) > 1.98:
 					rep_b.append(1)
 					if self.verbose: print("Square " + self.get_square_str(index) + " NEGRO : " + "OCUPADO ------------------->" + occupied_pixs_black)
 				else:
 					rep_b.append(0)
 					if self.verbose: print("Square " + self.get_square_str(index) + " NEGRO : " + "NO --------------->" + occupied_pixs_black)
-				if float(occupied_pixs_white) > 0.98:
+				if float(occupied_pixs_white) > 0.79:
 					rep_w.append(1)
 					if self.verbose: print("Square " + self.get_square_str(index) + " BLANCO : " + "OCUPADO ------------------->" + occupied_pixs_white)
 				else:
