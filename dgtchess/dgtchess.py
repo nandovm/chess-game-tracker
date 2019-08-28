@@ -212,7 +212,7 @@ def nothing(x):
 def prueba2():
 	start = time.time()
 	switch = True
-	old_score = 0.025
+	old_score = 0.01
 	img_width = 400
 	src = "/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/real2.mov"
 	#src = "/home/bonnaroo/Desktop/ws/dgtchess/dgtchess/videos/real2.mov"
@@ -238,6 +238,7 @@ def prueba2():
 	image_list = [image_ini]
 	count = 0
 	cooldown = False
+	k=0
 	cont = 1
 	value = 0
 	x=[]
@@ -256,12 +257,15 @@ def prueba2():
 		image_next_hsv = cv2.cvtColor(image_next, cv2.COLOR_BGR2HSV)
 		new_score, hist_image_next = get_ssmi(histimageA = hist_image_ini, imageB = image_next_hsv)
  
-		print(str(new_score*10) + "---------////" + str(new_score*10 - old_score*10) + "---------////" + str(old_score*10))
+		print(str(new_score*10) + "---------////" + str(new_score*10 - old_score*10) + "---------////" + str(k))
 		value = abs(new_score*10 - old_score*10)
+		
 		if switch: #subida
+			if value > 0.23: k+=1
 			#print(str(1)+ "----->" + str(new_score*100)) 
-			if value > 0.42:
+			if value > 0.42 or k==10:
 				switch = not switch
+				k = 0
 		elif not switch:
 			#print(str(3)+ "----->" + str(new_score*100)) 
 			if new_score*10 < 0.5 and new_score*10 > 0.2 :
@@ -291,7 +295,7 @@ def prueba2():
 
 				hist_image_ini = hist_image_next
 				switch = not switch
-				old_score = 0.025
+				old_score = 0.01
 				#old_score = 0.02
 
 				#time.sleep(1.0)
