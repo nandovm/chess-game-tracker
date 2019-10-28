@@ -1,3 +1,18 @@
+#This file is part of Chess-game-tracker.
+
+#Chess-game-tracker is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#Chess-game-tracker is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with Chess-game-tracker.  If not, see <https://www.gnu.org/licenses/>.
+
 from threading import Thread
 import imutils
 import cv2
@@ -6,7 +21,7 @@ import time
 # import the Queue class from Python 3
 if sys.version_info >= (3, 0):
 	from queue import Queue
- 
+
 # otherwise, import the Queue class for Python 2.7
 else:
 	from Queue import Queue
@@ -49,7 +64,7 @@ class Capturer:
 				# reached the end of the video file
 				if not grabbed:
 					self.stopped = True
-					
+
 				# if there are transforms to be done, might as well
 				# do them on producer thread before handing back to
 				# consumer thread. ie. Usually the producer is so far
@@ -86,4 +101,3 @@ class Capturer:
 	def read(self):
 	# return next frame in the queue
 		return self.Q.get()
-

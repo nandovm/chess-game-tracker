@@ -1,3 +1,17 @@
+#This file is part of Chess-game-tracker.
+
+#Chess-game-tracker is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#Chess-game-tracker is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with Chess-game-tracker.  If not, see <https://www.gnu.org/licenses/>.
  
 from __future__ import division
 import imutils
@@ -8,18 +22,18 @@ import itertools as itl
 
 from matplotlib import pyplot as plt
 
-class Processor: 
+class Processor:
 	def __init__(self, img_width, verbose, extra):
 
 		self.verbose = verbose
 		self.verbose_extra = extra
-		self.canny_ratio = 0.33  
+		self.canny_ratio = 0.33
 		self.key_corners = 0
 		self.img_width = img_width
 		self.max_thresh = 255
 		self.min_thresh_otsu = 0
 		self.min_thresh_binary = 127
-		self.thres_occ = 2 
+		self.thres_occ = 2
 		self.thres_edged_occ = 9.4
 		self.sqbor_ratio = 0
 		self.sq_offset = 0  #centrado de casilla
@@ -60,83 +74,83 @@ class Processor:
 		return res
 
 	def get_n_draw_squares(self, lined, square_width, square_height):
-	
+
 		x_list = []
 		y_list = []
-		
-	
+
+
 		for x in range(0,9):
 			y = x
 			new_x = square_width*x
 			new_y = square_height*y
-	
+
 			cv2.line(lined, (new_x, 0), (new_x, lined.shape[0]), (255, 255, 0), 2)
-	
+
 			cv2.line(lined, (0, new_y), (lined.shape[1], new_y), (255, 255, 0), 2)
-	
+
 			if x!=8:
 				x_list.append(new_x)
 			if y != 8:
 				y_list.append(new_y)
-	
+
 		pnts_lists = [x_list, y_list]
 		square_list = []
-		
+
 		#producto cartesiano
-		for e in itl.product(*pnts_lists): 
+		for e in itl.product(*pnts_lists):
 			square_list.append(e)
-	
+
 		return lined, square_list
-	
-	def get_crop_points(self, param): 
+
+	def get_crop_points(self, param):
 		box = cv2.threshold(param, self.min_thresh_binary, self.max_thresh, cv2.THRESH_BINARY)[1]
-	
-		
+
+
 		im,contours,hierarchy = cv2.findContours(box,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-	
+
 		contours = sorted(contours, key = cv2.contourArea, reverse = True)
 		cv2.drawContours(param, contours, -1, (0,255,0), 4)
-		
+
 		if self.verbose and self.verbose_extra:
 			cv2.imshow("Countours Found: " + str(len(contours)), param)
 			cv2.waitKey(0)
-		
-	
+
+
 		cnt = contours[4] #biggest contour0
 		self.x,self.y,self.w,self.h = cv2.boundingRect(cnt)
 		self.x_crop = self.x
-	
-	
-	
+
+
+
 	def check_occupancy(self, sq_image):
 		n_pixels = cv2.countNonZero(sq_image)
-	
+
 		dim = sq_image.shape[0]*sq_image.shape[1]
 		perc = (n_pixels/dim) * 100
 		return '%.2f'%(perc)
-	
-	
-	
-	
+
+
+
+
 	def crop_board_border(self, image, gray):
-	
+
 		dem = 8 + 2*self.sqbor_ratio;
-		
+
 		self.img_width = gray.shape[1]
 		img_height = gray.shape[0]
-		
+
 		sq_norm_size = self.img_width/dem
-		
+
 		desp = sq_norm_size * self.sqbor_ratio
-		
+
 		image = image[int(desp):int(img_height-desp), int(desp):int(self.img_width-desp)]
 		gray = gray[int(desp):int(img_height-desp), int(desp):int(self.img_width-desp)]
-	
+
 		return image, gray
-	
+
 	def get_histo_n_transf(self, gray, apply):
-	
-	
+
+
 		##HISTOGRAM
 		if apply is True:
 			hist,bins = np.histogram(gray.flatten(),256,[0,256])
@@ -146,57 +160,57 @@ class Processor:
 			cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
 			cdf = np.ma.filled(cdf_m,0).astype('uint8')
 			gray = cdf[gray]
-			
+
 			kernel = np.ones((7,7),np.uint8)
-		
+
 		#blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-	
+
 		#blurred = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
 		#blurred = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
-	
+
 		return gray
-	
+
 	def get_n_draw_corners(self, image):
 		ngray = np.float32(image.copy())
 		dst = cv2.cornerHarris(ngray,4,3,0.04)
-		
+
 		#result is dilated for marking the corners, not important
 		dst = cv2.dilate(dst,None)
-		
+
 		ret, dst = cv2.threshold(dst,0.1*dst.max(),255,0)
 		dst = np.uint8(dst)
-		
+
 		ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
-		
+
 		#define the criteria to stop and refine the corners
 		criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
 		corners = cv2.cornerSubPix(image,np.float32(centroids),(5,5),(-1,-1),criteria)
 		#here u can get corners
-		
-		
-		#res = np.hstack((centroids,corners)) 
-		#res = np.int0(res) 
-	
+
+
+		#res = np.hstack((centroids,corners))
+		#res = np.int0(res)
+
 		x_min = int(min(corners, key = lambda t: t[0])[0])
 		x_max = int(max(corners, key = lambda t: t[0])[0])
 		y_min = int(min(corners, key = lambda t: t[1])[1])
 		y_max = int(max(corners, key = lambda t: t[1])[1])
-		
-		
+
+
 		key_corners = ((x_min, y_min),(x_max, y_min), (x_min, y_max), (x_max, y_max))
-	
+
 		cornered = image.copy()
 		for x in range(0, len(key_corners)):
-		
+
 				x1, y1 = key_corners[x][0],key_corners[x][1]
 				x2, y2 = key_corners[x][0],key_corners[x][1]
 				cv2.line(cornered, (x1, y1), (x2, y2), (255, 0, 0),4)
-		
-		
 
-		
+
+
+
 		return key_corners
-	
+
 	def get_square_str(slef, index):
 
 		coc = index / 8
@@ -217,17 +231,17 @@ class Processor:
 		letter = squares.get(coc)
 
 		return str(letter + str(8 - res ))
-	
+
 	def get_board_array(self, image, turn):
-	
-	
+
+
 		if self.verbose and self.verbose_extra:
 			cv2.imshow('Original Image', image)
 			cv2.waitKey(0)
 
 		#Ya no es necesario por las mascaras blanca y negra
 		"""
-		image = cv2.convertScaleAbs(image, alpha=self.alpha, beta=self.beta)	
+		image = cv2.convertScaleAbs(image, alpha=self.alpha, beta=self.beta)
 		image = cv2.bilateralFilter(image, 7, 50, 50)
 		image = cv2.GaussianBlur(image, (3, 3), 0)
 		"""
@@ -235,14 +249,14 @@ class Processor:
 		unm_gray = gray.copy()
 
 		if self.key_corners == 0: self.key_corners = self.get_n_draw_corners(unm_gray.copy())
-		
+
 		#if self.verbose :
 		#	cv2.imshow('Harris',cornered)
 		#	cv2.waitKey(0)
 
 		#if self.x_crop == -1:
 		#	self.get_crop_points(gray.copy())
-		
+
 		#image = image[self.y:self.y+self.h, self.x:self.x+self.w]
 		#gray = gray[self.y:self.y+self.h, self.x:self.x+self.w]
 		image = image[self.key_corners[1][1]:self.key_corners[2][1], self.key_corners[0][0]:self.key_corners[1][0]]
@@ -255,32 +269,32 @@ class Processor:
 			cv2.imshow('Borderless Image', image)
 			cv2.waitKey(0)
 
-		
+
 		#image, cropped = self.crop_board_border(image.copy(), gray.copy())
-	
+
 		#if self.verbose:
 		#	cv2.imshow('Borderless Board', cropped)
 		#	cv2.waitKey(0)
-	
+
 
 		trans  = self.get_histo_n_transf(gray = gray.copy(), apply = self.do_transform)
 		square_width = int(image.shape[1]/8)
-		square_height = int(image.shape[0]/8)	
-	
+		square_height = int(image.shape[0]/8)
+
 		threshold, _ = cv2.threshold(trans, self.min_thresh_otsu, self.max_thresh, cv2.THRESH_OTSU)
-	
+
 		edged = cv2.Canny(trans, threshold*self.canny_ratio, threshold, apertureSize = 3, L2gradient = True)
-	
+
 		if self.verbose and self.do_transform:
 			cv2.imshow('Histogramed and Transformed', trans)
 			cv2.waitKey(0)
-	
+
 		if self.verbose and self.verbose_extra:
 			cv2.imshow('Cannied', edged)
 			cv2.waitKey(0)
-		
 
-		
+
+
 		white = self.get_whitepiecies_mask(image = image.copy())
 
 		black = self.get_blackpiecies_mask(image = image.copy())
@@ -304,21 +318,21 @@ class Processor:
 		if self.verbose and self.verbose_extra :
 			cv2.imshow('piecesMask', black)
 			cv2.waitKey(0)
-	
-	
+
+
 		lined, square_list = self.get_n_draw_squares(image.copy(), square_width, square_height)
-	
+
 		if self.verbose and self.verbose_extra :
 			cv2.imshow("LINES",lined)
 			cv2.waitKey(0)
 			cv2.destroyAllWindows()
-		
+
 		rep_w = [];
 		rep_b = [];
-		
+
 		for x in range(0, 8):
 			for y in range(0, 8):
-	
+
 				index = y+x*8
 
 
@@ -331,7 +345,7 @@ class Processor:
 				#black_n_white_crop = black_n_white[square_list[index][1]+self.sq_offset:square_list[index][1]+square_height-self.sq_offset, square_list[index][0]+self.sq_offset:square_list[index][0]+square_width-self.sq_offset]
 				#occupied_pixs_black_white = self.check_occupancy(black_n_white_crop)
 
-				
+
 				#para eliminar incertidumbre
 				#if (float(occupied_pixs_black_white) > 0 and float(occupied_pixs_black_white) < self.thres_occ + 0.04) and (abs(float(occupied_pixs_black_white) - self.thres_occ) < 0.25):
 				#	edged_crop = edged[ square_list[index][1]+self.sq_edged_offset:square_list[index][1]+square_height-self.sq_edged_offset, square_list[index][0]+self.sq_edged_offset:square_list[index][0]+square_width-self.sq_edged_offset ]
@@ -360,14 +374,14 @@ class Processor:
 					if turn:
 						cv2.imshow(str(index), black_crop)
 					else:
-						cv2.imshow(str(index), white_crop)	
+						cv2.imshow(str(index), white_crop)
 					#cv2.imshow("", edged)
 					cv2.waitKey(0)
 					cv2.destroyAllWindows()
 
 
 		cv2.destroyAllWindows()
-		if turn: 
+		if turn:
 			return rep_b, rep_w
 		else:
 			return rep_w, rep_b

@@ -1,0 +1,278 @@
+#This file is part of Chess-game-tracker.
+
+#Chess-game-tracker is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#Chess-game-tracker is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with Chess-game-tracker.  If not, see <https://www.gnu.org/licenses/>.
+
+from __future__ import division
+from collections import deque
+from IPython.display import SVG, display
+
+from operator import sub
+from common.Processor import Processor
+
+from multithread.Capturer import Capturer
+
+import matplotlib.pyplot as plt
+import random as rng
+import numpy as np
+import imutils
+import math
+
+#import PythonMagick
+import argparse
+import cv2
+import chess
+import chess.svg
+import time
+
+
+def show_svg(file):
+    display(SVG(file))
+
+def nothing(x):
+	pass
+
+
+class Tracker:
+	def __init__(self, img_width, src):
+
+		self.sq_dict =	{
+			"0": "a",
+			"1": "b",
+			"2": "c",
+			"3": "d",
+			"4": "e",
+			"5": "f",
+			"6": "g",
+			"7": "h",
+		}
+
+		self.switch=True
+		self.old_score=0.025
+		self.img_width=img_width
+		self.src=src
+		self.video_capturer = Capturer(src).start()
+		self.board_processor = Processor(img_width = img_width, verbose = False, extra = False)
+		self.pyboard = chess.Board()
+		self.board_ini=-1
+		self.sw_turn=False
+		self.inter = cv2.INTER_AREA
+
+	def get_ssmi(self, histimageA, imageB):
+
+		hist2 = cv2.calcHist([imageB],[0],None,[256],[0,256])
+
+		score = cv2.compareHist(histimageA, hist2,cv2.HISTCMP_BHATTACHARYYA)
+
+		return score, hist2
+
+	def get_chessmove(self):
+		npboard_ini = np.asarray(self.board_ini)
+		npboard_next = np.asarray(self.board_next)
+		position = npboard_ini - npboard_next
+		print(npboard_ini)
+		print(npboard_next)
+		print(position)
+		if all(v == 0 for v in position): return "0000"
+
+
+		origin = np.where(position == 1)[0][0]
+		dest = np.where(position == -1)[0][0]
+
+		or_col = int(origin/8)
+		or_row = 8 - origin%8
+
+		dest_col = int(dest/8)
+		dest_row = 8 - dest%8
+
+		move = self.sq_dict[str(or_col)] + str(or_row) + self.sq_dict[str(dest_col)] + str(dest_row)
+
+		return move
+
+	def process_move(self):
+		if(self.board_ini == -1):
+			self.board_ini, _ = self.board_processor.get_board_array(self.image_ini, self.sw_turn)
+
+
+			self.board_next, helper = self.board_processor.get_board_array(self.image_next, self.sw_turn)
+
+			move = get_chessmove(self.board_ini, self.board_next)
+
+			#show_svg(chess.svg.board(pyboard))
+			print(move)
+			print(self.pyboard)
+			print("<<==============================================================>>")
+			crrnt_move = chess.Move.from_uci(move)
+			self.pyboard.push(crrnt_move)
+			self.sw_turn = not self.sw_turn
+
+			if(move == "0000"):
+				self.pyboard.push(crrnt_move)
+				self.sw_turn = not self.sw_turn
+
+				#show_svg(chess.svg.board(pyboard))
+				print(self.pyboard)
+				print("<<==============================================================>>")
+
+				#board_ini =board_next
+
+
+				if move == "0000" :
+					self.board_ini =self.board_next
+				else:
+					self.board_ini = helper
+
+
+	def run(self):
+		start = time.time()
+		time.sleep(1.0)
+		self.image_ini = self.video_capturer.read()
+		ar = self.img_width/self.image_ini.shape[1]
+		self.image_ini = cv2.resize(self.image_ini,  (self.img_width, int(self.image_ini.shape[0]*ar)), interpolation=self.inter)
+		self.image_ini_hsv = cv2.cvtColor(self.image_ini, cv2.COLOR_BGR2HSV)
+		hist_image_ini =  cv2.calcHist([self.image_ini_hsv],[0],None,[256],[0,256])
+		self.board_ini, _ = self.board_processor.get_board_array(self.image_ini, self.sw_turn)
+		self.image_list = [self.image_ini]
+		i = 0
+		cont = 1
+		value = 0
+		cooldown = False
+		j = 0
+		x=[]
+		y=[]
+		print("START")
+
+		while(self.video_capturer.running()):
+			self.image_next = self.video_capturer.read()
+
+			if self.image_next is None: break
+
+			self.image_next = cv2.resize(self.image_next,  (self.img_width, int(self.image_next.shape[0]*ar)), interpolation=self.inter)
+			self.image_next_hsv = cv2.cvtColor(self.image_next, cv2.COLOR_BGR2HSV)
+			new_score, hist_image_next = self.get_ssmi(histimageA = hist_image_ini, imageB = self.image_next_hsv)
+
+			value = abs(new_score*10 - self.old_score*10)
+			#print(str(new_score*10) + "---------////" + str(value) + "---------////" + str(self.old_score*10))
+
+			if self.switch: #subida
+				#print(str(1)+ "----->" + str(new_score*100))
+				if value > 0.42:
+					self.switch = not self.switch
+					#print(str(2)+ "----->" + str(new_score*100))
+			elif not self.switch:
+				#print(str(3)+ "----->" + str(new_score*100))
+				if new_score*10 < 0.5 and new_score*10 > 0.2 : #cuanto mas bajo mas similares deben ser las imagenes
+					j+=1
+				if j==2:
+					#print( "================================>" + str(new_score*10 - self.old_score*10) +  "<================================")
+					#cv2.imshow("Inicial", self.image_ini)
+					#cv2.imshow(str(new_score*100), self.image_next)
+					#cv2.waitKey(0)
+					#cv2.destroyAllWindows()
+
+					for i in range(0, 5):
+						self.image_next = self.video_capturer.read()
+						if i == 3:
+							self.image_ini = cv2.resize(self.image_next,  (self.img_width, int(self.image_ini.shape[0]*ar)), interpolation=self.inter)
+							self.image_ini_hsv = cv2.cvtColor(self.image_ini, cv2.COLOR_BGR2HSV)
+							hist_image_ini =  cv2.calcHist([self.image_ini_hsv],[0],None,[256],[0,256])
+						if i == 4:
+							self.image_next = cv2.resize(self.image_next,  (self.img_width, int(self.image_next.shape[0]*ar)), interpolation=self.inter)
+							self.image_next_hsv = cv2.cvtColor(self.image_next, cv2.COLOR_BGR2HSV)
+							new_score, hist_image_next = self.get_ssmi(histimageA = hist_image_ini, imageB = self.image_next_hsv)
+							#print( "================================>" + str(new_score*10)  + "<================================")
+
+
+					self.image_list.append(self.image_next)
+					#cv2.imshow("image", image_next)
+					#cv2.waitKey(0)
+					#cv2.destroyAllWindows()
+
+					self.process_move();
+					self.image_ini = self.image_next
+					hist_image_ini = hist_image_next
+					self.switch = not self.switch
+					#self.old_score = 0.025
+
+					time.sleep(2.0)
+					j = 0
+			cont +=1
+			x.append(cont)
+			y.append(value)
+
+
+
+		print(self.pyboard.move_stack)
+		print(self.pyboard.board_fen())
+		end = time.time()
+		plt.plot(x, y)
+		plt.show()
+		print("Recogidas y procesadas " + str(len(image_list)) + " imagenes.")
+		print("Se ha tardado :" + str(end - start) + "seg")
+
+	def calibrate_hsvfilter(self):
+
+		cap = cv2.VideoCapture(self.src)
+
+		# Creating a window for later use
+		cv2.namedWindow('result')
+		cv2.namedWindow('tracks')
+		# Starting with 100's to prevent error while masking
+		h,s,v = 100,100,100
+
+		# Creating track bar
+		cv2.createTrackbar('h', 'tracks',35,180,nothing)
+		cv2.createTrackbar('s', 'tracks',0,255,nothing)
+		cv2.createTrackbar('v', 'tracks',0,255,nothing)
+
+		cv2.createTrackbar('hmax', 'tracks',180,180,nothing)
+		cv2.createTrackbar('smax', 'tracks',255,255,nothing)
+		cv2.createTrackbar('vmax', 'tracks',255,255,nothing)
+		kernel = np.ones((5,5),np.uint8)
+
+		while(1):
+
+			_, frame = cap.read()
+			#frame = cv2.imread("/home/sstuff/Escritorio/ws/dgtchess/dgtchess/videos/frame2.png")
+
+			#converting to HSV
+			frame = cv2.resize(frame,  (400, int(frame.shape[0]*(400/frame.shape[1]))), interpolation=cv2.INTER_AREA)
+			hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+			#hsv = cv2.erode(hsv,kernel,iterations = 1)
+			#hsv = cv2.dilate(hsv,kernel,iterations = 1)
+			# get info from track bar and appy to result
+			h = cv2.getTrackbarPos('h','tracks')
+			s = cv2.getTrackbarPos('s','tracks')
+			v = cv2.getTrackbarPos('v','tracks')
+
+			hh = cv2.getTrackbarPos('hmax','tracks')
+			sh = cv2.getTrackbarPos('smax','tracks')
+			vh = cv2.getTrackbarPos('vmax','tracks')
+			# Normal masking tracks
+			lower_blue = np.array([h,s,v])
+			upper_blue = np.array([hh,sh,vh])
+			mask = cv2.inRange(hsv,lower_blue, upper_blue)
+			result = cv2.bitwise_and(frame,frame,mask = mask)
+			_, result = cv2.threshold(result, 20, 255, cv2.THRESH_BINARY)
+			cv2.imshow('result',result)
+			#time.sleep(3.0)
+			k = cv2.waitKey(5) & 0xFF
+			if k == 27:
+				break
+				cap.release()
+
+				cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+	t=Tracker(img_width=400, src="/home/bonnaroo/Desktop/ws/Chess-game-tracker/dgtchess/videos/real2.mov")
+	t.run()
